@@ -1,0 +1,14 @@
+[workspace]
+members = [
+    "frame/attestor",
+    "frame/bridge",
+    "frame/bridgetransfer",
+    "frame/geode",
+    "frame/liveness",
+    "frame/transfer",
+    "primitives"
+]
+
+[profile.release]
+# Automata runtime requires unwinding.
+panic = "unwind"
