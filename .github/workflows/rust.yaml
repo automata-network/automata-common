@@ -76,7 +76,7 @@ jobs:
           chmod +x ${SCCACHE}
           sccache --version
           sccache -s
-     - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           target: wasm32-unknown-unknown
@@ -101,7 +101,7 @@ jobs:
       - name: Check sccache status
         run: sccache -s
 
-clippy:
+  clippy:
     name: Clippy
     runs-on: ubuntu-18.04
     steps:
