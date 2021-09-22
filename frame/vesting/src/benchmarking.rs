@@ -60,7 +60,7 @@ benchmarks!{
         add_locks::<T>(&caller, l as u8);
         add_vesting_plan::<T>(&caller)?;
         // At time zero, everything is vested.
-        // pallet_timestamp::<T>::set_timestamp(0);
+        Timestamp::<T>::set_timestamp(0u32.into());
         assert_eq!(
             Vesting::<T>::vesting_balance(&caller),
             Some(T::MinVestedTransfer::get()),
@@ -85,10 +85,10 @@ benchmarks!{
         add_vesting_plan::<T>(&caller)?;
 
         // This is the worst case in partial unlocked
-        Timestamp::<T>::set_timestamp(490u32.into());
+        Timestamp::<T>::set_timestamp(510u32.into());
         assert_eq!(
             Vesting::<T>::vesting_balance(&caller),
-            Some(1000u32.into()),
+            Some(100u32.into()),
             "Vesting amount incorrect",
         );
     }: unlock(RawOrigin::Signed(caller.clone()))
@@ -101,30 +101,30 @@ benchmarks!{
         );
     }
 
-    // unlock_complete_unlocked {
-    //     let l in 0 .. MaxLocksOf::<T>::get();
+    unlock_complete_unlocked {
+        let l in 0 .. MaxLocksOf::<T>::get();
 
-    //     let caller = whitelisted_caller();
-    //     T::Currency::make_free_balance_be(&caller, BalanceOf::<T>::max_value());
-    //     add_locks::<T>(&caller, l as u8);
-    //     add_vesting_plan::<T>(&caller)?;
+        let caller = whitelisted_caller();
+        T::Currency::make_free_balance_be(&caller, BalanceOf::<T>::max_value());
+        add_locks::<T>(&caller, l as u8);
+        add_vesting_plan::<T>(&caller)?;
 
-    //     // This is the worst case in partial unlocked
-    //     Timestamp::<T>::set_timestamp(500);
-    //     assert_eq!(
-    //         Vesting::<T>::vesting_balance(&caller),
-    //         Some(BalanceOf::<T>::zero()),
-    //         "Vesting schedule still active",
-    //     );
-    // }: unlock(RawOrigin::Signed(caller.clone()))
-    // verify {
-    //     // Vesting schedule is removed!
-    //     assert_eq!(
-    //         Vesting::<T>::vesting_balance(&caller),
-    //         None,
-    //         "Vesting schedule was not removed",
-    //     );
-    // }
+        // This is the worst case in partial unlocked
+        Timestamp::<T>::set_timestamp(520u32.into());
+        assert_eq!(
+            Vesting::<T>::vesting_balance(&caller),
+            Some(BalanceOf::<T>::zero()),
+            "Vesting schedule still active",
+        );
+    }: unlock(RawOrigin::Signed(caller.clone()))
+    verify {
+        // Vesting schedule is removed!
+        assert_eq!(
+            Vesting::<T>::vesting_balance(&caller),
+            None,
+            "Vesting schedule was not removed",
+        );
+    }
 
     vested_transfer {
         let l in 0 .. MaxLocksOf::<T>::get();
