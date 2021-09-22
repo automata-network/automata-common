@@ -1,6 +1,7 @@
-use crate::{mock::*, Attestor};
 use frame_support::assert_ok;
 use frame_system::pallet_prelude::*;
+use crate::{*, Attestor};
+use mock::{*};
 
 #[test]
 fn it_works_for_attestor_register() {
@@ -29,18 +30,6 @@ fn it_works_for_attestor_register() {
                 pubkey: pubkey,
                 geodes: Default::default(),
             }
-        );
-
-        // check the event emit
-        assert_eq!(
-            events(),
-            [
-                Event::pallet_balances(pallet_balances::Event::Reserved(
-                    attestor_account,
-                    min_stake
-                )),
-                Event::attestor(crate::Event::AttestorRegister(attestor_account)),
-            ]
         );
 
         // check the balance
@@ -82,14 +71,6 @@ fn it_works_for_attestor_remove() {
                 pubkey: vec![],
                 geodes: Default::default(),
             }
-        );
-
-        // check the event emit
-        assert_eq!(
-            events(),
-            [Event::attestor(crate::Event::AttestorRemove(
-                attestor_account
-            )),]
         );
     });
 }
@@ -143,14 +124,6 @@ fn it_works_for_attestor_update() {
                 pubkey: pubkey,
                 geodes: Default::default(),
             }
-        );
-
-        // check the event emit
-        assert_eq!(
-            events(),
-            [Event::attestor(crate::Event::AttestorUpdate(
-                attestor_account
-            )),]
         );
     });
 }
