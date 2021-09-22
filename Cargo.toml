@@ -7,7 +7,10 @@ members = [
     "frame/liveness",
     "frame/transfer",
     "frame/vesting",
-    "primitives"
+    "primitives",
+    "node-template/node",
+    "node-template/pallets/template",
+    "node-template/runtime",
 ]
 
 [profile.release]

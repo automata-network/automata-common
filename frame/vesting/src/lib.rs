@@ -2,6 +2,7 @@
 
 pub use pallet::*;
 
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 #[cfg(test)]
 mod mock;
@@ -24,8 +25,10 @@ pub mod pallet {
 
 	const VESTING_ID: LockIdentifier = *b"avesting";
 
-	type BalanceOf<T> =
+	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	pub type MaxLocksOf<T> =
+		<<T as Config>::Currency as LockableCurrency<<T as frame_system::Config>::AccountId>>::MaxLocks;
 
 	#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 	pub struct VestingPlan<Balance> {
@@ -224,6 +227,14 @@ pub mod pallet {
 			} else {
 				None
 			}
+		}
+
+		pub fn add_vesting_plan(who: &T::AccountId, plan: VestingPlan<BalanceOf<T>>) -> DispatchResult {
+			if VestingPlans::<T>::contains_key(&who) {
+				Err(Error::<T>::ExistingVestingPlan)?
+			}
+			VestingPlans::<T>::insert(&who, plan);
+			Ok(())
 		}
 	}
 }
