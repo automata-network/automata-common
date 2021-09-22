@@ -1,7 +1,7 @@
+use crate::{Attestor, *};
 use frame_support::assert_ok;
 use frame_system::pallet_prelude::*;
-use crate::{*, Attestor};
-use mock::{*};
+use mock::*;
 
 #[test]
 fn it_works_for_attestor_register() {
