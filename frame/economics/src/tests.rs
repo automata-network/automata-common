@@ -1,6 +1,8 @@
-use frame_support::{assert_err, assert_noop, assert_ok, traits::{WithdrawReasons, LockIdentifier, LockableCurrency}};
-use frame_system::RawOrigin;
-use sp_runtime::traits::BadOrigin;
+use frame_support::{
+    assert_noop, assert_ok, 
+    traits::{
+        Currency, WithdrawReasons, LockIdentifier, LockableCurrency, Imbalance
+    }};
 
 use super::*;
 use crate::mock::{Test, Balances, ExtBuilder, Economics};
@@ -53,3 +55,15 @@ fn check_burn_locked() {
         assert_eq!(Balances::total_issuance(), 100 * 25);
     });
 }
+
+// #[test]
+// fn check_abnormal_burn() {
+//     ExtBuilder::default().existential_deposit(100).build().execute_with(|| {
+//         assert_eq!(Balances::total_issuance(), 100 * 30);
+//         assert_eq!(Balances::burn(100 * 25).peek(), 2500);
+//         assert_eq!(Balances::total_issuance(), 500);
+//         assert_ok!(Economics::burn(Some(1).into(), 100 * 7));
+//         assert_eq!(Balances::total_issuance(), 0);
+//         assert_eq!(Balances::free_balance(&1), 100 * 5);
+//     });
+// }

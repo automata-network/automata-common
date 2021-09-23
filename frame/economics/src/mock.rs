@@ -2,7 +2,7 @@ use frame_support::parameter_types;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, Identity, IdentityLookup},
+	traits::{BlakeTwo256, IdentityLookup},
 };
 
 use super::*;
