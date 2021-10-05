@@ -6,6 +6,7 @@ members = [
     "frame/geode",
     "frame/liveness",
     "frame/transfer",
+    "frame/witness",
     "primitives"
 ]
 
