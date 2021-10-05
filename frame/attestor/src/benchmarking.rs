@@ -7,7 +7,6 @@ use crate::Module as Template;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
 
-benchmarks! {
-}
+benchmarks! {}
 
 impl_benchmark_test_suite!(Template, crate::mock::new_test_ext(), crate::mock::Test,);
