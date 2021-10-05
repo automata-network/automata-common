@@ -88,6 +88,7 @@ impl Config for Test {
     type Event = Event;
     type MinVestedTransfer = MinVestedTransfer;
     type UnixTime = Timestamp;
+    type VestingWeightInfo = ();
 }
 
 pub struct ExtBuilder {

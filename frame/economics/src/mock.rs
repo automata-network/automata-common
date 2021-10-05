@@ -72,6 +72,7 @@ impl pallet_balances::Config for Test {
 impl Config for Test {
     type Currency = Balances;
     type Event = Event;
+    type WeightInfo = ();
 }
 
 pub struct ExtBuilder {

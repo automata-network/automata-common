@@ -16,7 +16,7 @@ pub mod pallet {
     use frame_support::{
         ensure,
         pallet_prelude::*,
-        traits::{Currency, ExistenceRequirement, LockableCurrency, WithdrawReasons},
+        traits::{Currency, ExistenceRequirement, Imbalance, LockableCurrency, WithdrawReasons},
     };
     use frame_system::{ensure_signed, pallet_prelude::*};
     use sp_std::prelude::*;
@@ -71,6 +71,8 @@ pub mod pallet {
             .map_err(|_| Error::<T>::InsufficientLiquidity)?;
 
             let imbalance = T::Currency::burn(amount);
+
+            let imbalance_raw = imbalance.peek().clone();
             if let Err(_e) = T::Currency::settle(
                 &who,
                 imbalance,
@@ -80,7 +82,7 @@ pub mod pallet {
                 // Will not fail because we have check before
             }
 
-            Self::deposit_event(Event::<T>::EconomicsBurnt(who, amount));
+            Self::deposit_event(Event::<T>::EconomicsBurnt(who, imbalance_raw));
             Ok(())
         }
     }

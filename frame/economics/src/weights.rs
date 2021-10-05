@@ -16,3 +16,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
         (45_189_000 as Weight)
     }
 }
+
+impl WeightInfo for () {
+    fn burn() -> Weight {
+        (45_189_000 as Weight)
+    }
+}
