@@ -6,7 +6,12 @@ members = [
     "frame/geode",
     "frame/liveness",
     "frame/transfer",
-    "primitives"
+    "frame/vesting",
+    "frame/economics",
+    "primitives",
+    "node-template/node",
+    "node-template/pallets/template",
+    "node-template/runtime",
 ]
 
 [profile.release]
