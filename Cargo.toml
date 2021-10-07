@@ -13,3 +13,4 @@ members = [
 [profile.release]
 # Automata runtime requires unwinding.
 panic = "unwind"
+
