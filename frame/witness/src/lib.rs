@@ -25,12 +25,12 @@ pub mod pallet {
 
     const DEFAULT_RELAYER_THRESHOLD: u32 = 1;
 
-    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+    #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug)]
     pub enum ChainId {
         Ethereum
     }
 
-    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+    #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug)]
     pub enum PrivacyLevel {
         Private,
         Medium,
@@ -178,12 +178,17 @@ pub mod pallet {
         type WorkSpaceId: Parameter
             + EncodeLike
             + AtLeast32BitUnsigned
-            + Default;
+            + Default
+            + Clone
+            + Copy;
 
         /// workspace identity type
         type ChainId: Parameter
-        + EncodeLike
-        + AtLeast32BitUnsigned;
+            + EncodeLike
+            + AtLeast32BitUnsigned
+            + Default
+            + Clone
+            + Copy;
 
         /// proposal identity type
         type ProposalId: Parameter
@@ -241,7 +246,7 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// Vote threshold has changed (new_threshold)
-        RelayerThresholdChanged(u32),
+        NewWorkSpace(T::AccountId, T::WorkSpaceId, EthAddress, Vec<u8>, Vec<u8>, EthAddress, ChainId)
         
     }
 
@@ -302,22 +307,38 @@ pub mod pallet {
         
         #[pallet::weight(0)]
         pub fn create_workspace(origin: OriginFor<T>, 
-            max_proposal_id: u32,
+            max_proposal_id: T::ProposalId,
             erc20_contract: EthAddress,
             additional_data: Vec<u8>,
             name: Vec<u8>,
             spec: Vec<u8>,
             contract: EthAddress,
-            chainId: T::ChainId) -> DispatchResultWithPostInfo {
+            chainId: ChainId) -> DispatchResultWithPostInfo {
 
-            ensure_signed(origin)?;
-            Self::ensure_valid_workspace(additional_data, name, spec)?;
+            let who = ensure_signed(origin)?;
 
-            
+            // valid check
+            Self::ensure_valid_workspace(&additional_data, &name, &spec)?;
 
+            // create new object
+            let current_work_space_id = Self::current_work_space_id();
+            let new_work_space = WorkSpace::new(max_proposal_id,
+                erc20_contract.clone(),
+                additional_data.clone());
+            let new_work_space_addtional_data = WorkspaceAdditionalData::new(
+                name.clone(), spec.clone(), contract.clone(), chainId
+            );
+
+            // insert data into map
+            WorkSpaceMap::<T>::insert(current_work_space_id, Some(new_work_space));
+            WorkspaceAdditionalDataMap::<T>::insert(current_work_space_id, Some(new_work_space_addtional_data));
 
             // update work space id
-            CurrentWorkSpaceId::<T>::put(Self::current_work_space_id() + 1_u32.into());
+            CurrentWorkSpaceId::<T>::put(current_work_space_id + 1_u32.into());
+            
+            // store event            
+            Self::deposit_event(Event::NewWorkSpace(who, current_work_space_id, erc20_contract, name, spec, contract, chainId));
+
             Ok(().into())
         }
 
@@ -404,9 +425,9 @@ pub mod pallet {
 
         /// Checks if who is a relayer
         pub fn ensure_valid_workspace( 
-            additional_data: Vec<u8>,
-            name: Vec<u8>,
-            spec: Vec<u8>) -> DispatchResultWithPostInfo {
+            additional_data: &Vec<u8>,
+            name: &Vec<u8>,
+            spec: &Vec<u8>) -> DispatchResultWithPostInfo {
 
             ensure!(Self::current_work_space_id() != T::WorkSpaceId::max_value(), Error::<T>::WorkSpaceIdOverFlow);
             ensure!((additional_data.len() as u32) < T::MaxWorkSpaceAdditionalDataLength::get(), Error::<T>::InvalidWorkSpaceAdditionalDataLength);
