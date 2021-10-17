@@ -24,14 +24,39 @@ pub mod pallet {
     use sp_std::prelude::*;
 
     const DEFAULT_RELAYER_THRESHOLD: u32 = 1;
+
+    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+    pub enum ChainId {
+        Ethereum
+    }
+
+    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+    pub enum PrivacyLevel {
+        Private,
+        Medium,
+        Public,
+    }
+
     type EthAddress = [u8; 20];
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-    pub struct WorkSpace<WorkSpaceId, ProposalId> {
-        pub workspace_id: WorkSpaceId,
+    pub struct WorkSpace<ProposalId> {
         pub max_proposal_id: ProposalId,
         pub erc20_contract: EthAddress,
         pub additional_data: Vec<u8>,
+    }
+
+    impl<ProposalId> WorkSpace<ProposalId> {
+        pub fn new(max_proposal_id: ProposalId,
+            erc20_contract: EthAddress,
+            additional_data: Vec<u8>) -> Self {
+                WorkSpace {
+                    max_proposal_id: max_proposal_id,
+                    erc20_contract: erc20_contract,
+                    additional_data: additional_data,
+                }
+
+        }
     }
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -39,12 +64,25 @@ pub mod pallet {
         pub name: Vec<u8>,
         pub spec: Vec<u8>,
         pub contract: EthAddress,
-        pub chainId: u32,
+        pub chainId: ChainId,
+    }
+
+    impl WorkspaceAdditionalData {
+        pub fn new(name: Vec<u8>,
+            spec: Vec<u8>,
+            contract: EthAddress,
+            chainId: ChainId,) -> Self {
+                WorkspaceAdditionalData {
+                    name: name,
+                    spec: spec,
+                    contract: contract,
+                    chainId: chainId,
+                }
+        }
     }
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-    pub struct Proposal<ProposalId, BlockNumber, BlockHeight> {
-        pub proposal_id: ProposalId,
+    pub struct Proposal<BlockNumber, BlockHeight> {
         pub author: EthAddress,
         pub start_block_number: BlockNumber,
         pub end_block_number: BlockNumber,
@@ -52,14 +90,48 @@ pub mod pallet {
         pub data: Vec<u8>,
     }
 
+    impl<BlockNumber, BlockHeight> Proposal<BlockNumber, BlockHeight> {
+        pub fn new(author: EthAddress,
+            start_block_number: BlockNumber,
+            end_block_number: BlockNumber,
+            snapshot: BlockHeight,
+            data: Vec<u8>,) -> Self {
+                Proposal {
+                author: author,
+                start_block_number: start_block_number,
+                end_block_number: end_block_number,
+                snapshot: snapshot,
+                data: data,
+                }
+            }
+    }
+
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-    pub struct ProposalData<BlockNumber, BlockHeight> {
+    pub struct ProposalData {
         pub title: Vec<u8>,
         pub content: Vec<u8>,
-        pub start_block_number: BlockNumber,
-        pub end_block_number: BlockNumber,
-        pub snapshot: BlockHeight,
+        pub options: Vec<Vec<u8>>,
+        pub votes: Vec<u32>,
+        pub privacy_level: PrivacyLevel,
         pub data: Vec<u8>,
+    }
+
+    impl ProposalData {
+        pub fn new(title: Vec<u8>,
+            content: Vec<u8>,
+            options: Vec<Vec<u8>>,
+            votes: Vec<u32>,
+            privacy_level: PrivacyLevel,
+            data: Vec<u8>,) -> Self {
+                ProposalData {
+                    title: title,
+                    content: content,
+                    options: options,
+                    votes: votes,
+                    privacy_level: privacy_level,
+                    data: data,
+                }
+            }
     }
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -69,6 +141,22 @@ pub mod pallet {
         pub function_name: Vec<u8>,
         pub function_args: Vec<Vec<u8>>,
         pub function_vals: Vec<Vec<u8>>,
+    }
+
+    impl CallbackInfo {
+        pub fn new(callback_type: Vec<u8>,
+            contract: EthAddress,
+            function_name: Vec<u8>,
+            function_args: Vec<Vec<u8>>,
+            function_vals: Vec<Vec<u8>>,) -> Self {
+                CallbackInfo {
+                    callback_type: callback_type,
+                    contract: contract,
+                    function_name: function_name,
+                    function_args: function_args,
+                    function_vals: function_vals,
+                }
+            }
     }
 
     #[pallet::pallet]
@@ -89,7 +177,8 @@ pub mod pallet {
         /// workspace identity type
         type WorkSpaceId: Parameter
             + EncodeLike
-            + AtLeast32BitUnsigned;
+            + AtLeast32BitUnsigned
+            + Default;
 
         /// workspace identity type
         type ChainId: Parameter
@@ -99,7 +188,8 @@ pub mod pallet {
         /// proposal identity type
         type ProposalId: Parameter
         + EncodeLike
-        + AtLeast32BitUnsigned;
+        + AtLeast32BitUnsigned
+        + Default;
 
         /// proposal identity type
         type BlockHeight: Parameter
@@ -157,8 +247,11 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// Relayer threshold not set
-        ThresholdNotSet,
+        /// 
+        WorkSpaceIdOverFlow,
+        InvalidWorkSpaceAdditionalDataLength,
+        InvalidWorkSpaceNameLength,
+        InvalidWorkSpaceSpecLength,
        
     }
 
@@ -170,37 +263,43 @@ pub mod pallet {
     // pub type ChainNonces<T> = StorageMap<_, Blake2_256, BridgeChainId, DepositNonce>;
 
     #[pallet::storage]
-    #[pallet::getter(fn relayer_count)]
-    pub type RelayerCount<T> = StorageValue<_, u32, ValueQuery>;
+    #[pallet::getter(fn current_work_space_id)]
+    pub type CurrentWorkSpaceId<T: Config> = StorageValue<_, T::WorkSpaceId, ValueQuery>;
 
-    // #[pallet::storage]
-    // #[pallet::getter(fn votes)]
-    // pub type Votes<T: Config> = StorageDoubleMap<
-    //     _,
-    //     Blake2_256,
-    //     BridgeChainId,
-    //     Blake2_256,
-    //     (DepositNonce, T::Proposal),
-    //     ProposalVotes<T::AccountId, T::BlockNumber>,
-    // >;
+    #[pallet::storage]
+    #[pallet::getter(fn work_space_map)]
+    pub type WorkSpaceMap<T: Config> = StorageMap<
+        _,
+        Blake2_256,
+        T::WorkSpaceId,
+        Option<WorkSpace<T::ProposalId>>,
+        ValueQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn work_space_additional_data_map)]
+    pub type WorkspaceAdditionalDataMap<T: Config> = StorageMap<
+        _,
+        Blake2_256,
+        T::WorkSpaceId,
+        Option<WorkspaceAdditionalData>,
+        ValueQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn proposal_map)]
+    pub type ProposalMap<T: Config> = StorageMap<
+        _,
+        Blake2_256,
+        T::ProposalId,
+        Option<Proposal<T::BlockNumber, T::BlockNumber>>,
+        ValueQuery
+    >;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Sets the vote threshold for proposals.
-        ///
-        /// This threshold is used to determine how many votes are required
-        /// before a proposal is executed.
-        ///
-        /// # <weight>
-        /// - O(1) lookup and insert
-        /// # </weight>
-        #[pallet::weight(0)]
-        pub fn set_threshold(origin: OriginFor<T>, threshold: u32) -> DispatchResultWithPostInfo {
-            T::AdminOrigin::ensure_origin(origin)?;
-            // Self::set_relayer_threshold(threshold)
-            Ok(().into())
-        }
-
+        /// 
+        
         #[pallet::weight(0)]
         pub fn create_workspace(origin: OriginFor<T>, 
             max_proposal_id: u32,
@@ -212,6 +311,13 @@ pub mod pallet {
             chainId: T::ChainId) -> DispatchResultWithPostInfo {
 
             ensure_signed(origin)?;
+            Self::ensure_valid_workspace(additional_data, name, spec)?;
+
+            
+
+
+            // update work space id
+            CurrentWorkSpaceId::<T>::put(Self::current_work_space_id() + 1_u32.into());
             Ok(().into())
         }
 
@@ -244,7 +350,7 @@ pub mod pallet {
             end_block_number: T::BlockNumber,
             snapshot: T::BlockHeight,
             data: Vec<u8>,
-            proposalData: ProposalData<T::BlockNumber, T::BlockHeight>,
+            proposalData: ProposalData,
             callbackInfo: CallbackInfo) -> DispatchResultWithPostInfo {
 
             ensure_signed(origin)?;
@@ -258,7 +364,7 @@ pub mod pallet {
             end_block_number: T::BlockNumber,
             snapshot: T::BlockHeight,
             data: Vec<u8>,
-            proposalData: ProposalData<T::BlockNumber, T::BlockHeight>,
+            proposalData: ProposalData,
             callbackInfo: CallbackInfo) -> DispatchResultWithPostInfo {
 
 
@@ -274,6 +380,22 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::weight(0)]
+        pub fn vote_for_proposal(origin: OriginFor<T>, 
+            proposal_id: T::WorkSpaceId) -> DispatchResultWithPostInfo {
+
+            ensure_root(origin)?;
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn force_vote_for_proposal(origin: OriginFor<T>, 
+            proposal_id: T::WorkSpaceId) -> DispatchResultWithPostInfo {
+
+            ensure_root(origin)?;
+            Ok(().into())
+        }
+
         
     }
 
@@ -281,7 +403,28 @@ pub mod pallet {
         // *** Utility methods ***
 
         /// Checks if who is a relayer
-        pub fn is_relayer(who: &T::AccountId) -> bool {
+        pub fn ensure_valid_workspace( 
+            additional_data: Vec<u8>,
+            name: Vec<u8>,
+            spec: Vec<u8>) -> DispatchResultWithPostInfo {
+
+            ensure!(Self::current_work_space_id() != T::WorkSpaceId::max_value(), Error::<T>::WorkSpaceIdOverFlow);
+            ensure!((additional_data.len() as u32) < T::MaxWorkSpaceAdditionalDataLength::get(), Error::<T>::InvalidWorkSpaceAdditionalDataLength);
+            ensure!((name.len() as u32) < T::MaxWorkSpaceNameLength::get(), Error::<T>::InvalidWorkSpaceNameLength);
+            ensure!((spec.len() as u32) < T::MaxWorkSpaceSpecLength::get(), Error::<T>::InvalidWorkSpaceSpecLength);
+
+            Ok(().into())
+        }
+
+        pub fn is_valid_proposal(who: &T::AccountId) -> bool {
+            true
+        }
+
+        pub fn is_valid_vote(who: &T::AccountId) -> bool {
+            true
+        }
+
+        pub fn is_valid_call_back(who: &T::AccountId) -> bool {
             true
         }
 
