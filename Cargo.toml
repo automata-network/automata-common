@@ -7,7 +7,12 @@ members = [
     "frame/liveness",
     "frame/transfer",
     "frame/witness",
-    "primitives"
+    "frame/vesting",
+    "frame/economics",
+    "primitives",
+    "node-template/node",
+    "node-template/pallets/template",
+    "node-template/runtime",
 ]
 
 [profile.release]
