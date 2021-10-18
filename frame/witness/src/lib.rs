@@ -260,9 +260,6 @@ pub mod pallet {
        
     }
 
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
-
     // #[pallet::storage]
     // #[pallet::getter(fn chains)]
     // pub type ChainNonces<T> = StorageMap<_, Blake2_256, BridgeChainId, DepositNonce>;
@@ -277,8 +274,8 @@ pub mod pallet {
         _,
         Blake2_256,
         T::WorkSpaceId,
-        Option<WorkSpace<T::ProposalId>>,
-        ValueQuery
+        WorkSpace<T::ProposalId>,
+        OptionQuery
     >;
 
     #[pallet::storage]
@@ -287,8 +284,8 @@ pub mod pallet {
         _,
         Blake2_256,
         T::WorkSpaceId,
-        Option<WorkspaceAdditionalData>,
-        ValueQuery
+        WorkspaceAdditionalData,
+        OptionQuery
     >;
 
     #[pallet::storage]
@@ -297,9 +294,23 @@ pub mod pallet {
         _,
         Blake2_256,
         T::ProposalId,
-        Option<Proposal<T::BlockNumber, T::BlockNumber>>,
-        ValueQuery
+        Proposal<T::BlockNumber, T::BlockNumber>,
+        OptionQuery
     >;
+
+    #[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		
+
+		/// Block finalization
+		fn on_finalize(_n: BlockNumberFor<T>) {
+
+			// ProposalMap::<T>::retain(|key, proposal| {
+            //     true
+            // });
+		}
+	}
+
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -319,22 +330,14 @@ pub mod pallet {
 
             // valid check
             Self::ensure_valid_workspace(&additional_data, &name, &spec)?;
-
-            // create new object
             let current_work_space_id = Self::current_work_space_id();
-            let new_work_space = WorkSpace::new(max_proposal_id,
-                erc20_contract.clone(),
-                additional_data.clone());
-            let new_work_space_addtional_data = WorkspaceAdditionalData::new(
-                name.clone(), spec.clone(), contract.clone(), chainId
-            );
-
-            // insert data into map
-            WorkSpaceMap::<T>::insert(current_work_space_id, Some(new_work_space));
-            WorkspaceAdditionalDataMap::<T>::insert(current_work_space_id, Some(new_work_space_addtional_data));
-
-            // update work space id
-            CurrentWorkSpaceId::<T>::put(current_work_space_id + 1_u32.into());
+            Self::add_workspace(max_proposal_id,
+                erc20_contract,
+                additional_data,
+                name.clone(),
+                spec.clone(),
+                contract,
+                chainId);
             
             // store event            
             Self::deposit_event(Event::NewWorkSpace(who, current_work_space_id, erc20_contract, name, spec, contract, chainId));
@@ -436,6 +439,32 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+        pub fn add_workspace(max_proposal_id: T::ProposalId,
+            erc20_contract: EthAddress,
+            additional_data: Vec<u8>,
+            name: Vec<u8>,
+            spec: Vec<u8>,
+            contract: EthAddress,
+            chainId: ChainId) {
+                // create new object
+                let current_work_space_id = Self::current_work_space_id();
+
+
+                let new_work_space = WorkSpace::new(max_proposal_id,
+                    erc20_contract.clone(),
+                    additional_data.clone());
+                let new_work_space_addtional_data = WorkspaceAdditionalData::new(
+                    name.clone(), spec.clone(), contract.clone(), chainId
+                );
+
+                // insert data into map
+                WorkSpaceMap::<T>::insert(current_work_space_id, new_work_space);
+                WorkspaceAdditionalDataMap::<T>::insert(current_work_space_id, new_work_space_addtional_data);
+
+                // update work space id
+                CurrentWorkSpaceId::<T>::put(current_work_space_id + 1_u32.into());
+            }
 
         pub fn is_valid_proposal(who: &T::AccountId) -> bool {
             true
