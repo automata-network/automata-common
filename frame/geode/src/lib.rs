@@ -18,6 +18,7 @@ pub mod pallet {
     use primitives::BlockNumber;
     use sp_runtime::{RuntimeDebug, SaturatedConversion};
     use sp_std::{collections::btree_map::BTreeMap, prelude::*};
+    use automata_traits::GeodeAccounting;
 
     #[cfg(feature = "std")]
     use serde::{Deserialize, Serialize};
@@ -76,6 +77,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_attestor::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type GeodeAccounting: GeodeAccounting<AccountId=Self::AccountId>;
 
         #[pallet::constant]
         type DispatchConfirmationTimeout: Get<BlockNumber>;
@@ -238,6 +240,7 @@ pub mod pallet {
                     <frame_system::Module<T>>::block_number().saturated_into::<BlockNumber>();
                 geode_record.state = GeodeState::Registered;
                 geode_record.provider = who.clone();
+                T::GeodeAccounting::geode_staking(who.clone())?;
 
                 <Geodes<T>>::insert(&geode, &geode_record);
                 <RegisteredGeodes<T>>::insert(&geode, &block_number);
@@ -260,7 +263,10 @@ pub mod pallet {
             ensure!(geode.provider == who, Error::<T>::NoRight);
 
             match Self::transit_state(&geode, GeodeState::Null) {
-                true => Ok(().into()),
+                true => {
+                    T::GeodeAccounting::geode_unreserve(who)?;
+                    Ok(().into())
+                }
                 false => Err(Error::<T>::InvalidTransition.into()),
             }
         }
@@ -709,6 +715,12 @@ pub mod pallet {
                     <UnknownGeodes<T>>::remove(unknown_geode);
                 }
             }
+        }
+    }
+
+    impl<T: Config> Get<Vec::<GeodeOf<T>>> for Pallet<T> {
+        fn get() -> Vec::<GeodeOf<T>> {
+            Self::registered_geodes()
         }
     }
 }

@@ -19,6 +19,7 @@ pub mod pallet {
     use sp_std::borrow::ToOwned;
     use sp_std::collections::btree_set::BTreeSet;
     use sp_std::prelude::*;
+    use automata_traits::AttestorAccounting;
 
     #[cfg(feature = "std")]
     use serde::{Deserialize, Serialize};
@@ -489,6 +490,7 @@ pub mod pallet {
                 pallet_attestor::Attestors::<T>::contains_key(&who),
                 pallet_attestor::Error::<T>::InvalidAttestor
             );
+            T::AttestorAccounting::attestor_unreserve(who.clone());
             Self::do_attestor_exit(&who);
             Ok(().into())
         }

@@ -23,12 +23,14 @@ sp-core = { default-features = false, git = 'https://github.com/automata-network
 
 # local dependencies
 primitives = { package = "automata-primitives", path = "../../primitives", default-features = false }
+automata-traits = { package = "automata-traits", path = "../../traits", default-features = false }
 
 [dev-dependencies]
 serde = { version = "1.0.119" }
 sp-io = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-
 pallet-balances = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+
+pallet-accounting = { path = "../accounting"}
 
 [features]
 default = ['std', 'full_crypto']

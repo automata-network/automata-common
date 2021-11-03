@@ -1,0 +1,17 @@
+[package]
+name = "automata-traits"
+version = "0.1.0"
+authors = ["Automata Team"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+codec = { default-features = false, features = ['derive'], package = 'parity-scale-codec', version = '2.0.0' }
+frame-support = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"frame-support/std",
+]
