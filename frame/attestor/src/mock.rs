@@ -10,7 +10,7 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-pub const INIT_BALANCE: u128 = 100_100_100;
+pub const INIT_BALANCE: u64 = 100_100_100;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -31,40 +31,40 @@ parameter_types! {
 }
 
 impl system::Config for Test {
-    type BaseCallFilter = ();
-    type BlockWeights = ();
-    type BlockLength = ();
-    type DbWeight = ();
-    type Origin = Origin;
-    type Call = Call;
-    type Index = u64;
-    type BlockNumber = u64;
-    type Hash = H256;
-    type Hashing = BlakeTwo256;
-    type AccountId = u64;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
-    type Event = Event;
-    type BlockHashCount = BlockHashCount;
-    type Version = ();
-    type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<u128>;
-    type OnNewAccount = ();
-    type OnKilledAccount = ();
-    type SystemWeightInfo = ();
-    type SS58Prefix = SS58Prefix;
-    type OnSetCode = ();
+	type BaseCallFilter = frame_support::traits::Everything;
+	type Origin = Origin;
+	type Call = Call;
+	type Index = u64;
+	type BlockNumber = u64;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type Header = Header;
+	type Event = Event;
+	type BlockHashCount = BlockHashCount;
+	type DbWeight = ();
+	type Version = ();
+	type AccountData = pallet_balances::AccountData<u64>;
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
+	type PalletInfo = PalletInfo;
+	type BlockWeights = ();
+	type BlockLength = ();
+	type SS58Prefix = SS58Prefix;
+	type OnSetCode = ();
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: u128 = 500;
+    pub const ExistentialDeposit: u64 = 500;
     pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
     /// The type for recording an account's balance.
-    type Balance = u128;
+    type Balance = u64;
     /// The ubiquitous event type.
     type Event = Event;
     type DustRemoval = ();

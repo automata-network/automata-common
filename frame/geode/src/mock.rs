@@ -11,7 +11,7 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-pub const INIT_BALANCE: u128 = 100_100_100;
+pub const INIT_BALANCE: u64 = 100_100_100;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -20,10 +20,10 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Storage, Event<T>},
-        AttestorModule: pallet_attestor::{Module, Call, Storage, Event<T>},
-        GeodeModule: pallet_geode::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+        AttestorModule: pallet_attestor::{Pallet, Call, Storage, Event<T>},
+        GeodeModule: pallet_geode::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -33,44 +33,47 @@ parameter_types! {
 }
 
 impl system::Config for Test {
-    type BaseCallFilter = ();
-    type BlockWeights = ();
-    type BlockLength = ();
-    type DbWeight = ();
-    type Origin = Origin;
-    type Call = Call;
-    type Index = u64;
-    type BlockNumber = u64;
-    type Hash = H256;
-    type Hashing = BlakeTwo256;
-    type AccountId = u64;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
-    type Event = Event;
-    type BlockHashCount = BlockHashCount;
-    type Version = ();
-    type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<u128>;
-    type OnNewAccount = ();
-    type OnKilledAccount = ();
-    type SystemWeightInfo = ();
-    type SS58Prefix = SS58Prefix;
+	type BaseCallFilter = frame_support::traits::Everything;
+	type Origin = Origin;
+	type Call = Call;
+	type Index = u64;
+	type BlockNumber = u64;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type Header = Header;
+	type Event = Event;
+	type BlockHashCount = BlockHashCount;
+	type DbWeight = ();
+	type Version = ();
+	type AccountData = pallet_balances::AccountData<u64>;
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
+	type PalletInfo = PalletInfo;
+	type BlockWeights = ();
+	type BlockLength = ();
+	type SS58Prefix = SS58Prefix;
+	type OnSetCode = ();
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: u128 = 500;
+    pub const ExistentialDeposit: u64 = 500;
 }
 
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
     /// The type for recording an account's balance.
-    type Balance = u128;
+    type Balance = u64;
     /// The ubiquitous event type.
     type Event = Event;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
+    type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Test
