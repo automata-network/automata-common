@@ -1,6 +1,7 @@
 use crate as pallet_geode;
 use frame_support::parameter_types;
 use frame_system as system;
+use primitives::BlockNumber;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -19,10 +20,10 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-        AttestorModule: pallet_attestor::{Pallet, Call, Storage, Event<T>},
-        GeodeModule: pallet_geode::{Pallet, Call, Storage, Event<T>},
+        System: frame_system::{Module, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Module, Call, Storage, Event<T>},
+        AttestorModule: pallet_attestor::{Module, Call, Storage, Event<T>},
+        GeodeModule: pallet_geode::{Module, Call, Storage, Event<T>},
     }
 );
 
@@ -54,12 +55,10 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
-    type OnSetCode = ();
 }
 
 parameter_types! {
     pub const ExistentialDeposit: u128 = 500;
-    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Test {
@@ -71,8 +70,6 @@ impl pallet_balances::Config for Test {
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
-    type MaxReserves = MaxReserves;
-    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
@@ -90,8 +87,17 @@ impl pallet_attestor::Config for Test {
     type Call = Call;
 }
 
+parameter_types! {
+    pub const DispatchConfirmationTimeout: BlockNumber = 12;
+    pub const PutOnlineTimeout: BlockNumber = 40;
+    pub const AttestationExpiryBlockNumber: BlockNumber = 30;
+}
+
 impl pallet_geode::Config for Test {
     type Event = Event;
+    type DispatchConfirmationTimeout = DispatchConfirmationTimeout;
+    type PutOnlineTimeout = PutOnlineTimeout;
+    type AttestationExpiryBlockNumber = AttestationExpiryBlockNumber;
 }
 
 // Build genesis storage according to the mock runtime.

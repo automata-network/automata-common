@@ -1,10 +1,15 @@
 use crate as liveness;
-use frame_support::parameter_types;
+use frame_support::{
+    parameter_types,
+    traits::{OnFinalize, OnInitialize},
+};
 use frame_system as system;
+use primitives::BlockNumber;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    Percent,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -19,11 +24,12 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-        AttestorModule: pallet_attestor::{Pallet, Call, Storage, Event<T>},
-        GeodeModule: pallet_geode::{Pallet, Call, Storage, Event<T>},
-        LivenessModule: liveness::{Pallet, Call, Storage, Event<T>},
+        System: frame_system::{Module, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Module, Call, Storage, Event<T>},
+        AttestorModule: pallet_attestor::{Module, Call, Storage, Event<T>},
+        GeodeModule: pallet_geode::{Module, Call, Storage, Event<T>},
+        ServiceModule: pallet_service::{Module, Call, Storage, Event<T>},
+        LivenessModule: liveness::{Module, Call, Storage, Event<T>},
     }
 );
 
@@ -55,12 +61,10 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
-    type OnSetCode = ();
 }
 
 parameter_types! {
     pub const ExistentialDeposit: u128 = 500;
-    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Test {
@@ -72,8 +76,6 @@ impl pallet_balances::Config for Test {
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
-    type MaxReserves = MaxReserves;
-    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
@@ -91,12 +93,39 @@ impl pallet_attestor::Config for Test {
     type Call = Call;
 }
 
+parameter_types! {
+    pub const DispatchConfirmationTimeout: BlockNumber = 12;
+    pub const PutOnlineTimeout: BlockNumber = 40;
+    pub const AttestationExpiryBlockNumber: BlockNumber = 30;
+}
+
 impl pallet_geode::Config for Test {
     type Event = Event;
+    type DispatchConfirmationTimeout = DispatchConfirmationTimeout;
+    type PutOnlineTimeout = PutOnlineTimeout;
+    type AttestationExpiryBlockNumber = AttestationExpiryBlockNumber;
+}
+impl pallet_service::Config for Test {
+    type Event = Event;
+}
+
+parameter_types! {
+    pub const ReportExpiryBlockNumber: BlockNumber = 10;
+    pub const ReportApprovalRatio: Percent = Percent::from_percent(50);
+    pub const UnknownExpiryBlockNumber: BlockNumber = 5760;
+    pub const DegradedInstantiatedExpiryBlockNumber: BlockNumber = 30;
+    pub const AttestorNotifyTimeoutBlockNumber: BlockNumber = 12;
+    pub const DefaultMinAttestorNum: u32 = 1;
 }
 
 impl liveness::Config for Test {
     type Event = Event;
+    type ReportExpiryBlockNumber = ReportExpiryBlockNumber;
+    type ReportApprovalRatio = ReportApprovalRatio;
+    type UnknownExpiryBlockNumber = UnknownExpiryBlockNumber;
+    type DegradedInstantiatedExpiryBlockNumber = DegradedInstantiatedExpiryBlockNumber;
+    type AttestorNotifyTimeoutBlockNumber = AttestorNotifyTimeoutBlockNumber;
+    type DefaultMinAttestorNum = DefaultMinAttestorNum;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -164,4 +193,14 @@ pub fn provider_register_geode(
     };
 
     GeodeModule::provider_register_geode(Origin::signed(provider), geode);
+}
+
+pub fn run_to_block(n: u32) {
+    while System::block_number() < n as u64 {
+        LivenessModule::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        LivenessModule::on_initialize(System::block_number());
+    }
 }
