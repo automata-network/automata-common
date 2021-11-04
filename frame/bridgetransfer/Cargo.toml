@@ -1,5 +1,5 @@
 [package]
-authors = ["Automata Team"]
+authors = ["ChainSafe", "Automata Team"]
 description = 'FRAME pallet for bridge transfer related logic.'
 edition = '2018'
 homepage = 'https://www.ata.network/'
