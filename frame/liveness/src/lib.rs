@@ -10,8 +10,9 @@ mod tests;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use automata_traits::AttestorAccounting;
     use core::convert::{TryFrom, TryInto};
-    use frame_support::{ensure};
+    use frame_support::ensure;
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use primitives::BlockNumber;
@@ -19,7 +20,6 @@ pub mod pallet {
     use sp_std::borrow::ToOwned;
     use sp_std::collections::btree_set::BTreeSet;
     use sp_std::prelude::*;
-    use automata_traits::AttestorAccounting;
 
     #[cfg(feature = "std")]
     use serde::{Deserialize, Serialize};
@@ -273,7 +273,7 @@ pub mod pallet {
                             // remove geode from service if there is
                             for geode in geodes {
                                 let geode_record = pallet_geode::Geodes::<T>::get(geode);
-                                
+
                                 match geode_record.state {
                                     pallet_geode::GeodeState::Instantiated => {
                                         Self::detach_geode_services_dispatches(&geode_record);
@@ -281,14 +281,14 @@ pub mod pallet {
                                             &geode_record,
                                             pallet_geode::GeodeState::Attested,
                                         );
-                                    },
+                                    }
                                     pallet_geode::GeodeState::Degraded => {
                                         Self::detach_geode_services_dispatches(&geode_record);
                                         <pallet_geode::Module<T>>::transit_state(
                                             &geode_record,
                                             pallet_geode::GeodeState::Registered,
                                         );
-                                    },
+                                    }
                                     _ => {
                                         // do nothing
                                     }

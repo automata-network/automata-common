@@ -14,6 +14,7 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use automata_traits::AttestorAccounting;
     use frame_support::traits::{Currency, ReservableCurrency};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, pallet_prelude::*, unsigned::ValidateUnsigned,
@@ -29,9 +30,8 @@ pub mod pallet {
     use sp_core::sr25519::Pair as Sr25519Pair;
     use sp_core::sr25519::{Public, Signature};
     use sp_runtime::{RuntimeDebug, SaturatedConversion};
-    use sp_std::collections::{btree_set::BTreeSet, btree_map::BTreeMap};
+    use sp_std::collections::{btree_map::BTreeMap, btree_set::BTreeSet};
     use sp_std::prelude::*;
-    use automata_traits::AttestorAccounting;
 
     /// Attestor struct
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
@@ -59,7 +59,7 @@ pub mod pallet {
         /// The currency in which fees are paid and contract balances are held.
         type Currency: ReservableCurrency<Self::AccountId>;
         type Call: From<Call<Self>>;
-        type AttestorAccounting: AttestorAccounting<AccountId=Self::AccountId>;
+        type AttestorAccounting: AttestorAccounting<AccountId = Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -261,13 +261,11 @@ pub mod pallet {
             SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
         }
 
-        pub fn get_all_attestors() -> BTreeMap::<T::AccountId, usize> {
+        pub fn get_all_attestors() -> BTreeMap<T::AccountId, usize> {
             let mut result = BTreeMap::new();
-            let iterator = <Attestors<T>>::iter()
-            .map(|(accountId, attestor)| {
-                    result.insert(accountId, attestor.geodes.len());
-                }
-            );
+            let iterator = <Attestors<T>>::iter().map(|(accountId, attestor)| {
+                result.insert(accountId, attestor.geodes.len());
+            });
             result
         }
 
@@ -308,7 +306,7 @@ pub mod pallet {
             for geode in attestor_record.geodes.into_iter() {
                 ret.push(geode)
             }
-            
+
             // change storage
             <AttestorNum<T>>::put(<AttestorNum<T>>::get() - 1);
             <AttestorLastNotify<T>>::remove(&attestor);
@@ -379,8 +377,8 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> Get<BTreeMap::<T::AccountId, usize>> for Pallet<T> {
-        fn get() -> BTreeMap::<T::AccountId, usize> {
+    impl<T: Config> Get<BTreeMap<T::AccountId, usize>> for Pallet<T> {
+        fn get() -> BTreeMap<T::AccountId, usize> {
             Self::get_all_attestors()
         }
     }

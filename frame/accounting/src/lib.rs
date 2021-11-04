@@ -10,14 +10,14 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use frame_support::traits::{Currency, ReservableCurrency};
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*,};
-    use frame_system::pallet_prelude::*;
-    use sp_std::collections::{btree_set::BTreeSet, btree_map::BTreeMap};
-    use sp_std::prelude::*;
-    use core::{convert::TryInto,};
     use automata_traits::{AttestorAccounting, GeodeAccounting};
+    use core::convert::TryInto;
+    use frame_support::traits::{Currency, ReservableCurrency};
+    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
+    use frame_system::pallet_prelude::*;
     use pallet_geode::GeodeOf;
+    use sp_std::collections::{btree_map::BTreeMap, btree_set::BTreeSet};
+    use sp_std::prelude::*;
 
     type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -30,24 +30,24 @@ pub mod pallet {
         /// The currency in which fees are paid and contract balances are held.
         type Currency: ReservableCurrency<Self::AccountId> + Currency<Self::AccountId>;
 
-        type GetAttestors: Get<BTreeMap::<Self::AccountId, usize>>;
-        type GetGeodes: Get<Vec::<Self::AccountId>>;
+        type GetAttestors: Get<BTreeMap<Self::AccountId, usize>>;
+        type GetGeodes: Get<Vec<Self::AccountId>>;
 
         type AttestorStakingAmount: Get<BalanceOf<Self>>;
         type GeodeStakingAmount: Get<BalanceOf<Self>>;
         type AttestorTotalReward: Get<BalanceOf<Self>>;
         type GeodeTotalReward: Get<BalanceOf<Self>>;
-    
+
         type GeodeTerminatePenalty: Get<BalanceOf<Self>>;
         type GeodeMisconductForAttestor: Get<BalanceOf<Self>>;
-        type GeodeMisconductForServiceUser: Get<BalanceOf<Self>>;  
-    
+        type GeodeMisconductForServiceUser: Get<BalanceOf<Self>>;
+
         type SlotLength: Get<Self::BlockNumber>;
-    
+
         type AttestorBasicRewardRatio: Get<u8>;
         type CommissionRateForService: Get<u8>;
         type CommissionRateForOnDemand: Get<u8>;
-    
+
         type AttestorRewardEachSlot: Get<BalanceOf<Self>>;
         type GeodeRewardEachSlot: Get<BalanceOf<Self>>;
     }
@@ -58,13 +58,11 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn total_attestor_distributed_reward)]
-    pub type TotalAttestorDistributedReward<T: Config> =
-        StorageValue<_, BalanceOf<T>>;
+    pub type TotalAttestorDistributedReward<T: Config> = StorageValue<_, BalanceOf<T>>;
 
-        #[pallet::storage]
+    #[pallet::storage]
     #[pallet::getter(fn total_geode_distributed_reward)]
-    pub type TotalGeodeDistributedReward<T: Config> =
-        StorageValue<_, BalanceOf<T>>;
+    pub type TotalGeodeDistributedReward<T: Config> = StorageValue<_, BalanceOf<T>>;
 
     // The pallet's runtime storage items.
     #[pallet::storage]
@@ -108,7 +106,7 @@ pub mod pallet {
                 }
             }
 
-			let slot_length= T::SlotLength::get();
+            let slot_length = T::SlotLength::get();
             let index_in_slot = block_number % slot_length;
 
             /// Reward at the begin of each slot
@@ -119,19 +117,16 @@ pub mod pallet {
                 Self::deposit_event(Event::GeodeRewarded(block_number));
             }
 
-			10000
-		}
+            10000
+        }
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(0)]
-        pub fn attestor_register(
-            origin: OriginFor<T>,
-            
-        ) -> DispatchResultWithPostInfo {
+        pub fn attestor_register(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-          
+
             Ok(().into())
         }
     }
@@ -145,16 +140,21 @@ pub mod pallet {
             let attestors_length = attestors.len();
             let geodes_length: usize = attestors.iter().map(|(_, geodes)| geodes).sum();
             let reward_each_slot = T::AttestorRewardEachSlot::get();
-            
+
             /// Compute basic reward and commission reward
-            let basic_reward = reward_each_slot * BalanceOf::<T>::from(T::AttestorBasicRewardRatio::get()) / BalanceOf::<T>::from(100_u32);
-            let basic_reward_per_attestor = basic_reward / BalanceOf::<T>::from(attestors_length as u32);
+            let basic_reward = reward_each_slot
+                * BalanceOf::<T>::from(T::AttestorBasicRewardRatio::get())
+                / BalanceOf::<T>::from(100_u32);
+            let basic_reward_per_attestor =
+                basic_reward / BalanceOf::<T>::from(attestors_length as u32);
             let commission_reward = reward_each_slot - basic_reward;
-            let commission_reward_per_geode = commission_reward / BalanceOf::<T>::from(geodes_length as u32);
+            let commission_reward_per_geode =
+                commission_reward / BalanceOf::<T>::from(geodes_length as u32);
 
             /// Reward each attestor
             attestors.iter().map(|(accountId, geodes)| {
-                let reward = basic_reward_per_attestor + commission_reward_per_geode * BalanceOf::<T>::from(*geodes as u32);
+                let reward = basic_reward_per_attestor
+                    + commission_reward_per_geode * BalanceOf::<T>::from(*geodes as u32);
                 <T as Config>::Currency::deposit_into_existing(accountId, reward);
             });
 
@@ -182,7 +182,7 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config>  AttestorAccounting for Pallet<T> {
+    impl<T: Config> AttestorAccounting for Pallet<T> {
         type AccountId = <T as frame_system::Config>::AccountId;
         fn attestor_staking(who: T::AccountId) -> DispatchResultWithPostInfo {
             <T as Config>::Currency::reserve(&who, T::AttestorStakingAmount::get())?;
@@ -195,7 +195,7 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config>  GeodeAccounting for Pallet<T> {
+    impl<T: Config> GeodeAccounting for Pallet<T> {
         type AccountId = <T as frame_system::Config>::AccountId;
         fn geode_staking(who: T::AccountId) -> DispatchResultWithPostInfo {
             <T as Config>::Currency::reserve(&who, T::GeodeStakingAmount::get())?;

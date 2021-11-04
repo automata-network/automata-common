@@ -1,8 +1,8 @@
 use crate::{Attestor, *};
 use frame_support::assert_ok;
 use frame_system::pallet_prelude::*;
-use mock::*;
 use hex_literal::hex;
+use mock::*;
 use primitives::AccountId;
 
 #[test]

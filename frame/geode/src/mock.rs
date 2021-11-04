@@ -35,29 +35,29 @@ parameter_types! {
 }
 
 impl system::Config for Test {
-	type BaseCallFilter = frame_support::traits::Everything;
-	type Origin = Origin;
-	type Call = Call;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type DbWeight = ();
-	type Version = ();
-	type AccountData = pallet_balances::AccountData<u64>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type PalletInfo = PalletInfo;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type SS58Prefix = SS58Prefix;
-	type OnSetCode = ();
+    type BaseCallFilter = frame_support::traits::Everything;
+    type Origin = Origin;
+    type Call = Call;
+    type Index = u64;
+    type BlockNumber = u64;
+    type Hash = H256;
+    type Hashing = BlakeTwo256;
+    type AccountId = u64;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Header = Header;
+    type Event = Event;
+    type BlockHashCount = BlockHashCount;
+    type DbWeight = ();
+    type Version = ();
+    type AccountData = pallet_balances::AccountData<u64>;
+    type OnNewAccount = ();
+    type OnKilledAccount = ();
+    type SystemWeightInfo = ();
+    type PalletInfo = PalletInfo;
+    type BlockWeights = ();
+    type BlockLength = ();
+    type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
 }
 
 parameter_types! {
@@ -75,7 +75,7 @@ impl pallet_balances::Config for Test {
     type AccountStore = System;
     type WeightInfo = ();
     type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
+    type ReserveIdentifier = [u8; 8];
 }
 
 impl AttestorAccounting for Test {
