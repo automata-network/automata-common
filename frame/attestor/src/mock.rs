@@ -82,6 +82,9 @@ impl AttestorAccounting for Test {
     fn attestor_staking(who: Self::AccountId) -> DispatchResultWithPostInfo {
         Ok(().into())
     }
+    fn attestor_unreserve(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Test

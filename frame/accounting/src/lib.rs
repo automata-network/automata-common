@@ -31,7 +31,7 @@ pub mod pallet {
         type Currency: ReservableCurrency<Self::AccountId> + Currency<Self::AccountId>;
 
         type GetAttestors: Get<BTreeMap::<Self::AccountId, usize>>;
-        type GetGeodes: Get<Vec::<GeodeOf<Self>>>;
+        type GetGeodes: Get<Vec::<Self::AccountId>>;
 
         type AttestorStakingAmount: Get<BalanceOf<Self>>;
         type GeodeStakingAmount: Get<BalanceOf<Self>>;
@@ -172,7 +172,7 @@ pub mod pallet {
             let reward = reward_each_slot / BalanceOf::<T>::from(geodes_len as u32);
 
             geodes.iter().map(|geode| {
-                <T as Config>::Currency::deposit_into_existing(&geode.id, reward);
+                <T as Config>::Currency::deposit_into_existing(&geode, reward);
             });
 
             match Self::total_geode_distributed_reward() {

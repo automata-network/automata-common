@@ -4,7 +4,7 @@ use frame_support::{
     traits::{OnFinalize, OnInitialize},
 };
 use frame_system as system;
-use primitives::BlockNumber;
+use primitives::*;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -12,8 +12,10 @@ use sp_runtime::{
     Percent,
 };
 
+use frame_support::dispatch::DispatchResultWithPostInfo;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+use automata_traits::{AttestorAccounting, GeodeAccounting};
 
 pub const INIT_BALANCE: u64 = 100_100_100;
 
@@ -90,10 +92,31 @@ where
     type OverarchingCall = Call;
 }
 
+impl AttestorAccounting for Test {
+    type AccountId = u64;
+    fn attestor_staking(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn attestor_unreserve(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+}
+
+impl GeodeAccounting for Test {
+    type AccountId = u64;
+    fn geode_staking(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn geode_unreserve(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+}
+
 impl pallet_attestor::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
+    type AttestorAccounting = Test;
 }
 
 parameter_types! {
@@ -104,10 +127,12 @@ parameter_types! {
 
 impl pallet_geode::Config for Test {
     type Event = Event;
+    type GeodeAccounting = Test;
     type DispatchConfirmationTimeout = DispatchConfirmationTimeout;
     type PutOnlineTimeout = PutOnlineTimeout;
     type AttestationExpiryBlockNumber = AttestationExpiryBlockNumber;
 }
+
 impl pallet_service::Config for Test {
     type Event = Event;
 }

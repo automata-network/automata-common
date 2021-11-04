@@ -73,14 +73,6 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
-parameter_types! {
-    pub const AttestorStakingAmount: u64 = 1;
-    pub const AttestorTotalReward: u64 = 1;
-    pub const BasicRewardRatio: u8 = 20_u8;
-    pub const SlotLength: u64 = 10;
-    pub const RewardEachSlot: u64 = 100;
-}
-
 // All parameters for accounting
 pub const ATTESTOR_STAKING_AMOUNT: Balance = 1 * CENTS;
 pub const GEODE_STAKING_AMOUNT: Balance = 1 * CENTS;

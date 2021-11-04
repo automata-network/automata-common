@@ -718,9 +718,15 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> Get<Vec::<GeodeOf<T>>> for Pallet<T> {
-        fn get() -> Vec::<GeodeOf<T>> {
-            Self::registered_geodes()
+    impl<T: Config> Get<Vec::<T::AccountId>> for Pallet<T> {
+        fn get() -> Vec::<T::AccountId> {
+            let mut res = Vec::new();
+            <RegisteredGeodes<T>>::iter()
+                .map(|(id, _)| {
+                    res.push(id);
+                })
+                .all(|_| true);
+            res
         }
     }
 }
