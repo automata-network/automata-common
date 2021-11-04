@@ -7,10 +7,12 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
+use frame_support::dispatch::DispatchResultWithPostInfo;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+use automata_traits::AttestorAccounting;
 
-pub const INIT_BALANCE: u128 = 100_100_100;
+pub const INIT_BALANCE: u64 = 100_100_100;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -31,10 +33,7 @@ parameter_types! {
 }
 
 impl system::Config for Test {
-    type BaseCallFilter = ();
-    type BlockWeights = ();
-    type BlockLength = ();
-    type DbWeight = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type Origin = Origin;
     type Call = Call;
     type Index = u64;
@@ -46,25 +45,28 @@ impl system::Config for Test {
     type Header = Header;
     type Event = Event;
     type BlockHashCount = BlockHashCount;
+    type DbWeight = ();
     type Version = ();
-    type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<u128>;
+    type AccountData = pallet_balances::AccountData<u64>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
+    type PalletInfo = PalletInfo;
+    type BlockWeights = ();
+    type BlockLength = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: u128 = 500;
+    pub const ExistentialDeposit: u64 = 500;
     pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
     /// The type for recording an account's balance.
-    type Balance = u128;
+    type Balance = u64;
     /// The ubiquitous event type.
     type Event = Event;
     type DustRemoval = ();
@@ -73,6 +75,16 @@ impl pallet_balances::Config for Test {
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+}
+
+impl AttestorAccounting for Test {
+    type AccountId = u64;
+    fn attestor_staking(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn attestor_unreserve(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Test
@@ -87,6 +99,7 @@ impl attestor::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
+    type AttestorAccounting = Test;
 }
 
 // Build genesis storage according to the mock runtime.

@@ -10,8 +10,9 @@ mod tests;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use automata_traits::AttestorAccounting;
     use core::convert::{TryFrom, TryInto};
-    use frame_support::{debug, ensure};
+    use frame_support::ensure;
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use primitives::BlockNumber;
@@ -22,14 +23,6 @@ pub mod pallet {
 
     #[cfg(feature = "std")]
     use serde::{Deserialize, Serialize};
-
-    pub const REPORT_APPROVAL_RATIO: Percent = Percent::from_percent(50);
-    pub const REPORT_EXPIRY_BLOCK_NUMBER: BlockNumber = 10;
-    pub const ATTESTATION_EXPIRY_BLOCK_NUMBER: BlockNumber = 30;
-    pub const UNKNOWN_EXPIRY_BLOCK_NUMBER: BlockNumber = 5760;
-    pub const DEGRADED_INSTANTIATED_EXPIRY_BLOCK_NUMBER: BlockNumber = 30;
-    pub const ATTESTOR_NOTIFY_TIMEOUT_BLOCK_NUMBER: BlockNumber = 12;
-    pub const DEFAULT_MIN_ATTESTOR_NUM: u32 = 1;
 
     /// Geode state
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -75,10 +68,31 @@ pub mod pallet {
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + pallet_attestor::Config + pallet_geode::Config
+        frame_system::Config
+        + pallet_attestor::Config
+        + pallet_geode::Config
+        + pallet_service::Config
     {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        #[pallet::constant]
+        type ReportExpiryBlockNumber: Get<BlockNumber>;
+
+        #[pallet::constant]
+        type ReportApprovalRatio: Get<Percent>;
+
+        #[pallet::constant]
+        type UnknownExpiryBlockNumber: Get<BlockNumber>;
+
+        #[pallet::constant]
+        type DegradedInstantiatedExpiryBlockNumber: Get<BlockNumber>;
+
+        #[pallet::constant]
+        type AttestorNotifyTimeoutBlockNumber: Get<BlockNumber>;
+
+        #[pallet::constant]
+        type DefaultMinAttestorNum: Get<u32>;
     }
 
     #[pallet::pallet]
@@ -93,7 +107,7 @@ pub mod pallet {
 
     #[pallet::type_value]
     pub fn DefaultMinAttestorNum<T: Config>() -> u32 {
-        DEFAULT_MIN_ATTESTOR_NUM
+        T::DefaultMinAttestorNum::get()
     }
 
     #[pallet::storage]
@@ -142,6 +156,8 @@ pub mod pallet {
         NotAttestingFor,
         /// Invalid Report Type
         InvalidReportType,
+        /// Invalid Input
+        InvalidInput,
     }
 
     #[pallet::hooks]
@@ -153,96 +169,138 @@ pub mod pallet {
         fn on_initialize(block_number: T::BlockNumber) -> Weight {
             if let Ok(now) = TryInto::<BlockNumber>::try_into(block_number) {
                 // check is there a need to cancel degrade mode
-                if <DegradeMode<T>>::get()
-                    && pallet_attestor::AttestorNum::<T>::get() >= <MinAttestorNum<T>>::get()
                 {
-                    // reset all the start block num for degraded geode
-                    <pallet_geode::Pallet<T>>::reset_degraded_block_num();
-                    <DegradeMode<T>>::put(false);
+                    if <DegradeMode<T>>::get()
+                        && pallet_attestor::AttestorNum::<T>::get() >= <MinAttestorNum<T>>::get()
+                    {
+                        // reset all the start block num for degraded geode
+                        <pallet_geode::Module<T>>::reset_degraded_block_num();
+                        <DegradeMode<T>>::put(false);
+                    }
                 }
 
                 // clean expired reports
-                let mut expired = Vec::<(T::AccountId, u8)>::new();
-                <Reports<T>>::iter()
-                    .map(|(key, report)| {
-                        if report.start + REPORT_EXPIRY_BLOCK_NUMBER < now {
-                            expired.push(key);
-                        }
-                    })
-                    .all(|_| true);
-                for key in expired {
-                    <Reports<T>>::remove(key);
+                {
+                    let mut expired = Vec::<(T::AccountId, u8)>::new();
+                    <Reports<T>>::iter()
+                        .map(|(key, report)| {
+                            if (report.start + T::ReportExpiryBlockNumber::get()) < now {
+                                expired.push(key);
+                            }
+                        })
+                        .all(|_| true);
+                    for key in expired {
+                        <Reports<T>>::remove(key);
+                    }
                 }
 
                 // clean expired geodes
-                let mut expired_geodes = Vec::<T::AccountId>::new();
-                if !<DegradeMode<T>>::get() {
-                    pallet_geode::RegisteredGeodes::<T>::iter()
+                {
+                    let mut expired_geodes = Vec::<T::AccountId>::new();
+                    if !<DegradeMode<T>>::get() {
+                        pallet_geode::RegisteredGeodes::<T>::iter()
+                            .map(|(key, start)| {
+                                if start + T::AttestationExpiryBlockNumber::get() < now {
+                                    expired_geodes.push(key);
+                                }
+                            })
+                            .all(|_| true);
+                    }
+
+                    // clean expired unknown geode
+                    pallet_geode::UnknownGeodes::<T>::iter()
                         .map(|(key, start)| {
-                            if start + ATTESTATION_EXPIRY_BLOCK_NUMBER < now {
+                            if start + T::UnknownExpiryBlockNumber::get() < now {
                                 expired_geodes.push(key);
                             }
                         })
                         .all(|_| true);
+
+                    for key in expired_geodes {
+                        let geode = pallet_geode::Geodes::<T>::get(key);
+                        <pallet_geode::Module<T>>::transit_state(
+                            &geode,
+                            pallet_geode::GeodeState::Null,
+                        );
+                    }
                 }
 
-                // clean expired unknown geode
-                pallet_geode::UnknownGeodes::<T>::iter()
-                    .map(|(key, start)| {
-                        if start + UNKNOWN_EXPIRY_BLOCK_NUMBER < now {
-                            expired_geodes.push(key);
+                // detach Degraded geodes
+                {
+                    if !<DegradeMode<T>>::get() {
+                        let mut expired_degraded_geodes = Vec::<T::AccountId>::new();
+                        pallet_geode::DegradedGeodes::<T>::iter()
+                            .map(|(key, start)| {
+                                if start + T::DegradedInstantiatedExpiryBlockNumber::get() < now {
+                                    expired_degraded_geodes.push(key);
+                                }
+                            })
+                            .all(|_| true);
+
+                        for key in expired_degraded_geodes {
+                            Self::slash_geode(&key)
                         }
-                    })
-                    .all(|_| true);
-
-                for key in expired_geodes {
-                    <pallet_geode::Pallet<T>>::detach_geode(
-                        pallet_geode::DetachOption::Remove,
-                        key,
-                        None,
-                    )
-                    .map_err(|e| {
-                        debug(&e);
-                    })
-                    .ok();
-                }
-
-                // detach DegradedInstantiated geodes
-                if !<DegradeMode<T>>::get() {
-                    let mut expired_degraded_geodes = Vec::<T::AccountId>::new();
-                    pallet_geode::DegradedInstantiatedGeodes::<T>::iter()
-                        .map(|(key, start)| {
-                            if start + DEGRADED_INSTANTIATED_EXPIRY_BLOCK_NUMBER < now {
-                                expired_degraded_geodes.push(key);
-                            }
-                        })
-                        .all(|_| true);
-
-                    for key in expired_degraded_geodes {
-                        <pallet_geode::Pallet<T>>::detach_geode(
-                            pallet_geode::DetachOption::Unknown,
-                            key,
-                            None,
-                        )
-                        .map_err(|e| {
-                            debug(&e);
-                        })
-                        .ok();
                     }
                 }
 
                 // clean expired attestors
-                let mut expired_attestors = Vec::<T::AccountId>::new();
-                pallet_attestor::AttestorLastNotify::<T>::iter()
-                    .map(|(key, notify)| {
-                        if notify + ATTESTOR_NOTIFY_TIMEOUT_BLOCK_NUMBER < now {
-                            expired_attestors.push(key);
-                        }
-                    })
-                    .all(|_| true);
+                {
+                    let mut expired_attestors = Vec::<T::AccountId>::new();
+                    pallet_attestor::AttestorLastNotify::<T>::iter()
+                        .map(|(key, notify)| {
+                            if notify + T::AttestorNotifyTimeoutBlockNumber::get() < now {
+                                expired_attestors.push(key);
+                            }
+                        })
+                        .all(|_| true);
 
-                for key in expired_attestors {
-                    Self::do_attestor_exit(&key);
+                    for key in expired_attestors {
+                        Self::do_attestor_exit(&key);
+                    }
+                }
+
+                {
+                    // clean expired promised geodes
+                    let mut expired = Vec::<BlockNumber>::new();
+                    for (promise, geodes) in pallet_geode::PromisedGeodes::<T>::iter() {
+                        if promise != 0
+                            && promise
+                                <= now
+                                    + T::DispatchConfirmationTimeout::get()
+                                    + T::PutOnlineTimeout::get()
+                        {
+                            expired.push(promise);
+                            // remove geode from service if there is
+                            for geode in geodes {
+                                let geode_record = pallet_geode::Geodes::<T>::get(geode);
+
+                                match geode_record.state {
+                                    pallet_geode::GeodeState::Instantiated => {
+                                        Self::detach_geode_services_dispatches(&geode_record);
+                                        <pallet_geode::Module<T>>::transit_state(
+                                            &geode_record,
+                                            pallet_geode::GeodeState::Attested,
+                                        );
+                                    }
+                                    pallet_geode::GeodeState::Degraded => {
+                                        Self::detach_geode_services_dispatches(&geode_record);
+                                        <pallet_geode::Module<T>>::transit_state(
+                                            &geode_record,
+                                            pallet_geode::GeodeState::Registered,
+                                        );
+                                    }
+                                    _ => {
+                                        // do nothing
+                                    }
+                                }
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                    for promise in expired {
+                        pallet_geode::PromisedGeodes::<T>::remove(promise);
+                    }
                 }
             }
             0
@@ -276,11 +334,58 @@ pub mod pallet {
             );
             // check have report
             match ReportType::try_from(report_type) {
-                Ok(_) => {}
+                Ok(t) => {
+                    match t {
+                        ReportType::Challenge => {
+                            let geode = pallet_geode::Geodes::<T>::get(&geode_id);
+                            if geode.state == pallet_geode::GeodeState::Registered {
+                                // just exit attesting for it
+                                let mut attestors =
+                                    pallet_attestor::GeodeAttestors::<T>::get(&geode_id);
+                                attestors.remove(&who);
+
+                                if attestors.is_empty() {
+                                    pallet_attestor::GeodeAttestors::<T>::remove(&geode_id);
+                                } else {
+                                    pallet_attestor::GeodeAttestors::<T>::insert(
+                                        &geode_id, &attestors,
+                                    );
+                                }
+
+                                Self::deposit_event(Event::ReportBlame(who, geode_id));
+                                return Ok(().into());
+                            }
+                            ensure!(
+                                geode.state == pallet_geode::GeodeState::Attested
+                                    || geode.state == pallet_geode::GeodeState::Instantiated
+                                    || geode.state == pallet_geode::GeodeState::Degraded,
+                                pallet_geode::Error::<T>::InvalidGeodeState
+                            );
+                        }
+                        ReportType::Service => {
+                            let geode = pallet_geode::Geodes::<T>::get(&geode_id);
+                            ensure!(
+                                geode.state == pallet_geode::GeodeState::Instantiated
+                                    || geode.state == pallet_geode::GeodeState::Degraded,
+                                pallet_geode::Error::<T>::InvalidGeodeState
+                            );
+                            let service_use =
+                                pallet_service::Services::<T>::get(geode.order.unwrap().0);
+                            ensure!(
+                                service_use.geodes.contains(&geode_id),
+                                pallet_service::Error::<T>::InvalidServiceState
+                            );
+                        }
+                        _ => {
+                            return Err(Error::<T>::InvalidReportType.into());
+                        }
+                    }
+                }
                 Err(_) => {
                     return Err(Error::<T>::InvalidReportType.into());
                 }
             };
+
             let key = (geode_id.clone(), report_type);
             let mut report = ReportOf::<T>::default();
             if <Reports<T>>::contains_key(&key) {
@@ -288,15 +393,16 @@ pub mod pallet {
                 report.attestors.insert(who.clone());
             } else {
                 report.attestors.insert(who.clone());
-                let block_number = <frame_system::Pallet<T>>::block_number();
-                report.start = block_number.saturated_into::<BlockNumber>();
+                let block_number =
+                    <frame_system::Module<T>>::block_number().saturated_into::<BlockNumber>();
+                report.start = block_number;
             }
 
             // check current amount of misconduct satisfying the approval ratio
             if Percent::from_rational_approximation(
                 report.attestors.len(),
                 pallet_attestor::GeodeAttestors::<T>::get(&geode_id).len(),
-            ) >= REPORT_APPROVAL_RATIO
+            ) >= T::ReportApprovalRatio::get()
             {
                 // slash the geode
                 Self::slash_geode(&key.0);
@@ -334,7 +440,7 @@ pub mod pallet {
                 pallet_geode::Geodes::<T>::contains_key(&geode),
                 pallet_geode::Error::<T>::InvalidGeode
             );
-            let mut geode_record = pallet_geode::Geodes::<T>::get(&geode);
+            let geode_record = pallet_geode::Geodes::<T>::get(&geode);
             ensure!(
                 geode_record.state != pallet_geode::GeodeState::Unknown
                     && geode_record.state != pallet_geode::GeodeState::Offline,
@@ -353,29 +459,24 @@ pub mod pallet {
             attestors.insert(who.clone());
             pallet_attestor::GeodeAttestors::<T>::insert(&geode, &attestors);
 
-            // first attestor attesting this geode
-            if geode_record.state == pallet_geode::GeodeState::Registered
-                && attestors.len() as u32 >= <MinAttestorNum<T>>::get()
-            {
-                // update pallet_geode::Geodes
-                geode_record.state = pallet_geode::GeodeState::Attested;
-                pallet_geode::Geodes::<T>::insert(&geode, geode_record);
-
-                // remove from pallet_geode::RegisteredGeodes
-                pallet_geode::RegisteredGeodes::<T>::remove(&geode);
-
-                // move into pallet_geode::AttestedGeodes
-                let block_number = <frame_system::Pallet<T>>::block_number();
-                pallet_geode::AttestedGeodes::<T>::insert(
-                    &geode,
-                    block_number.saturated_into::<BlockNumber>(),
-                );
+            // posisble state change
+            if attestors.len() as u32 >= <MinAttestorNum<T>>::get() {
+                match geode_record.state {
+                    pallet_geode::GeodeState::Registered => {
+                        <pallet_geode::Module<T>>::transit_state(
+                            &geode_record,
+                            pallet_geode::GeodeState::Attested,
+                        );
+                    }
+                    pallet_geode::GeodeState::Degraded => {
+                        <pallet_geode::Module<T>>::transit_state(
+                            &geode_record,
+                            pallet_geode::GeodeState::Instantiated,
+                        );
+                    }
+                    _ => {}
+                }
             }
-
-            pallet_geode::GeodeUpdateCounters::<T>::insert(
-                &geode,
-                pallet_geode::GeodeUpdateCounters::<T>::get(&geode) + 1,
-            );
 
             Self::deposit_event(Event::AttestFor(who, geode));
             Ok(().into())
@@ -389,16 +490,102 @@ pub mod pallet {
                 pallet_attestor::Attestors::<T>::contains_key(&who),
                 pallet_attestor::Error::<T>::InvalidAttestor
             );
+            T::AttestorAccounting::attestor_unreserve(who.clone());
             Self::do_attestor_exit(&who);
             Ok(().into())
+        }
+
+        /// Remove geodes while unlink the related service/dispatch
+        /// Called by provider to turn geode offline
+        #[pallet::weight(0)]
+        pub fn provider_offline_geode(
+            origin: OriginFor<T>,
+            geode: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                pallet_geode::Geodes::<T>::contains_key(&geode),
+                pallet_geode::Error::<T>::InvalidGeode
+            );
+            let geode = pallet_geode::Geodes::<T>::get(geode);
+            ensure!(geode.provider == who, pallet_geode::Error::<T>::NoRight);
+            if geode.state == pallet_geode::GeodeState::Instantiated
+                || geode.state == pallet_geode::GeodeState::Degraded
+            {
+                ensure!(
+                    geode.promise != 0
+                        && geode.promise
+                            < <frame_system::Module<T>>::block_number()
+                                .saturated_into::<BlockNumber>(),
+                    pallet_geode::Error::<T>::InvalidPromise
+                );
+            }
+
+            Self::detach_geode_services_dispatches(&geode);
+            match <pallet_geode::Module<T>>::transit_state(
+                &geode,
+                pallet_geode::GeodeState::Offline,
+            ) {
+                true => Ok(().into()),
+                false => Err(pallet_geode::Error::<T>::InvalidTransition.into()),
+            }
         }
 
         /// Called by root to set the min stake
         #[pallet::weight(0)]
         pub fn set_min_attestor_num(origin: OriginFor<T>, num: u32) -> DispatchResultWithPostInfo {
             let _who = ensure_root(origin)?;
+            let prev_min_att_num = <MinAttestorNum<T>>::get();
+            if num > prev_min_att_num {
+                let mut geodes = Vec::new();
+                for (geode, _block_num) in pallet_geode::AttestedGeodes::<T>::iter() {
+                    let attestors = pallet_attestor::GeodeAttestors::<T>::get(&geode);
+                    if num > attestors.len() as u32 {
+                        // Self::degrade_geode(&geode);
+                        geodes.push(geode);
+                    }
+                }
+                for (geode, _block_num) in pallet_geode::InstantiatedGeodes::<T>::iter() {
+                    let attestors = pallet_attestor::GeodeAttestors::<T>::get(&geode);
+                    if num > attestors.len() as u32 {
+                        geodes.push(geode);
+                    }
+                }
+                for geode in geodes.iter() {
+                    Self::degrade_geode(&geode);
+                }
+            } else if num < prev_min_att_num {
+                let mut geodes_use = Vec::new();
+                for (geode, _block_num) in pallet_geode::RegisteredGeodes::<T>::iter() {
+                    let geode_use = pallet_geode::Geodes::<T>::get(&geode);
+                    geodes_use.push(geode_use);
+                }
+                for (geode, _block_num) in pallet_geode::DegradedGeodes::<T>::iter() {
+                    let geode_use = pallet_geode::Geodes::<T>::get(&geode);
+                    geodes_use.push(geode_use)
+                }
+                for geode_use in geodes_use.iter() {
+                    match geode_use.state {
+                        pallet_geode::GeodeState::Registered => {
+                            <pallet_geode::Module<T>>::transit_state(
+                                &geode_use,
+                                pallet_geode::GeodeState::Attested,
+                            );
+                        }
+                        pallet_geode::GeodeState::Degraded => {
+                            <pallet_geode::Module<T>>::transit_state(
+                                &geode_use,
+                                pallet_geode::GeodeState::Instantiated,
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+            } else {
+                return Err(Error::<T>::InvalidInput.into());
+            }
             <MinAttestorNum<T>>::put(num);
-            // TODO: cause geode state change immediately
+
             Ok(().into())
         }
 
@@ -413,20 +600,116 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        fn detach_geode_services_dispatches(geode: &pallet_geode::GeodeOf<T>) {
+            // Service related logic
+            // check if any service
+            if geode.order != None {
+                // geode having an service
+                let service_id = geode.order.unwrap().0;
+                let mut service_use = pallet_service::Services::<T>::get(&service_id);
+                if service_use.geodes.contains(&geode.id) {
+                    // geode already serving
+                    // update weighted uptime
+                    // get last updated block num
+                    let last_update = pallet_service::OnlineServices::<T>::get(&service_id);
+                    let updated_weighted_uptime =
+                        <pallet_service::Module<T>>::get_updated_weighted_uptime(
+                            service_use.weighted_uptime,
+                            last_update,
+                            service_use.geodes.len() as u32,
+                        );
+                    service_use.weighted_uptime = updated_weighted_uptime;
+
+                    // remove geode from service_use
+                    service_use.geodes.remove(&geode.id);
+
+                    let block_number =
+                        <frame_system::Module<T>>::block_number().saturated_into::<BlockNumber>();
+
+                    if service_use.geodes.len() == 0 {
+                        // move to Offline state
+                        match service_use.state {
+                            pallet_service::ServiceState::Online => {
+                                pallet_service::OnlineServices::<T>::remove(&service_id);
+                            }
+                            _ => {
+                                // no other case for now
+                            }
+                        }
+                        // change service state
+                        service_use.state = pallet_service::ServiceState::Offline;
+                        // clean expected ending
+                        service_use.expected_ending = None;
+                        // put service to new state map
+                        // pallet_service::OfflineServices::<T>::insert(&service_id, block_number);
+                    } else {
+                        // update latest online record for calculating weighted uptime next time
+                        pallet_service::OnlineServices::<T>::insert(&service_id, block_number);
+                        let order_use = pallet_service::Orders::<T>::get(&service_id);
+                        let expected_ending = <pallet_service::Module<T>>::get_expected_ending(
+                            order_use.geode_num,
+                            order_use.duration,
+                            updated_weighted_uptime,
+                            service_use.geodes.len() as u32,
+                        );
+                        <pallet_service::Module<T>>::update_expected_ending(
+                            service_id.to_owned(),
+                            service_use.expected_ending,
+                            expected_ending,
+                        );
+                        service_use.expected_ending = Some(expected_ending);
+                    }
+                    // generate new dispatch
+                    let mut new_dispatches =
+                        <pallet_service::Module<T>>::create_dispatches(1, service_id.to_owned())
+                            .unwrap();
+                    service_use.dispatches.append(&mut new_dispatches);
+                } else {
+                    // geode installing or uninstalling service
+                    if service_use.state == pallet_service::ServiceState::Terminated {
+                        // uninstalling
+                        // do nothing
+                    } else {
+                        // installing
+                        // reset the old dispatch
+                        let (_order_id, _block_num, dispatch) =
+                            pallet_service::PreOnlineDispatches::<T>::get(&geode.id);
+                        let mut dispatch_use = pallet_service::Dispatches::<T>::get(&dispatch);
+                        dispatch_use.geode = None;
+                        dispatch_use.state = pallet_service::DispatchState::Pending;
+                        pallet_service::PreOnlineDispatches::<T>::remove(&geode.id);
+                        pallet_service::PendingDispatchesQueue::<T>::insert(
+                            &dispatch_use.dispatch_id,
+                            &dispatch_use.service_id,
+                        );
+                    }
+                }
+                pallet_service::Services::<T>::insert(service_id, service_use);
+            } else {
+                // check is any dispatch on it
+                // if yes reset
+                if pallet_service::AwaitingDispatches::<T>::contains_key(&geode.id) {
+                    let (_order_id, _block_num, dispatch) =
+                        pallet_service::AwaitingDispatches::<T>::get(&geode.id);
+                    let mut dispatch_use = pallet_service::Dispatches::<T>::get(&dispatch);
+                    dispatch_use.geode = None;
+                    dispatch_use.state = pallet_service::DispatchState::Pending;
+                    pallet_service::AwaitingDispatches::<T>::remove(&geode.id);
+                    pallet_service::PendingDispatchesQueue::<T>::insert(
+                        &dispatch_use.dispatch_id,
+                        &dispatch_use.service_id,
+                    );
+                }
+            }
+        }
+
         /// Slash geode including update storage and penalty related logics
         fn slash_geode(key: &T::AccountId) {
-            <pallet_geode::Pallet<T>>::detach_geode(
-                pallet_geode::DetachOption::Unknown,
-                key.to_owned(),
-                None,
-            )
-            .map_err(|e| {
-                debug(&e);
-            })
-            .ok();
+            let geode = pallet_geode::Geodes::<T>::get(&key);
+            Self::detach_geode_services_dispatches(&geode);
 
-            // TODO... Service related logic
             // TODO... Penalty related logic
+            <pallet_geode::Module<T>>::transit_state(&geode, pallet_geode::GeodeState::Unknown);
         }
 
         /// Remove attestors while unlink the related geodes.
@@ -444,13 +727,37 @@ pub mod pallet {
                 }
 
                 if <MinAttestorNum<T>>::get() > attestors.len() as u32 {
-                    <pallet_geode::Pallet<T>>::degrade_geode(geode);
-                } else {
-                    // because GeodeUpdateCounters will be updated in degrade_geode
-                    pallet_geode::GeodeUpdateCounters::<T>::insert(
-                        &geode,
-                        pallet_geode::GeodeUpdateCounters::<T>::get(&geode) + 1,
+                    Self::degrade_geode(&geode);
+                }
+            }
+        }
+
+        fn degrade_geode(geode: &T::AccountId) {
+            let geode_use = pallet_geode::Geodes::<T>::get(&geode);
+            match geode_use.state {
+                pallet_geode::GeodeState::Attested => {
+                    // clean any existing dispatches
+                    Self::detach_geode_services_dispatches(&geode_use);
+                    <pallet_geode::Module<T>>::transit_state(
+                        &geode_use,
+                        pallet_geode::GeodeState::Registered,
                     );
+                }
+                pallet_geode::GeodeState::Instantiated => {
+                    // if haven't put service Online
+                    let service_use =
+                        pallet_service::Services::<T>::get(geode_use.order.unwrap().0);
+                    if !service_use.geodes.contains(&geode) {
+                        Self::detach_geode_services_dispatches(&geode_use);
+                    }
+
+                    <pallet_geode::Module<T>>::transit_state(
+                        &geode_use,
+                        pallet_geode::GeodeState::Degraded,
+                    );
+                }
+                _ => {
+                    // no state change
                 }
             }
         }
@@ -471,12 +778,12 @@ pub mod pallet {
             }
 
             // reset MinAttestorNum
-            <MinAttestorNum<T>>::put(DEFAULT_MIN_ATTESTOR_NUM);
+            <MinAttestorNum<T>>::put(T::DefaultMinAttestorNum::get());
 
             // reset DegradeMode
             <DegradeMode<T>>::put(true);
 
-            <pallet_geode::Pallet<T>>::clean_storage();
+            <pallet_geode::Module<T>>::clean_storage();
 
             <pallet_attestor::Module<T>>::clean_storage();
         }

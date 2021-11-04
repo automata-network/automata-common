@@ -31,6 +31,7 @@ pallet-bridge = { path = "../bridge", default-features = false}
 hex = { version = "0.4", default-features = false }
 
 [dev-dependencies]
+hex-literal = "0.3.1"
 pallet-balances = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false }
 
 [build-dependencies]
