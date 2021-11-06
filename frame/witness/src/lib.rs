@@ -298,6 +298,16 @@ pub mod pallet {
         OptionQuery
     >;
 
+    #[pallet::storage]
+    #[pallet::getter(fn proposal_expiration_map)]
+    pub type ProposalExpirationMap<T: Config> = StorageMap<
+        _,
+        Blake2_256,
+        T::BlockNumber,
+        Vec<Proposal<T::BlockNumber, T::BlockNumber>>,
+        OptionQuery
+    >;
+
     #[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		
