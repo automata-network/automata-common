@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+// #![feature(map_first_last)]
 
 pub use pallet::*;
 
@@ -13,6 +14,7 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use automata_traits::AttestorAccounting;
     use frame_support::traits::{Currency, ReservableCurrency};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, pallet_prelude::*, unsigned::ValidateUnsigned,
@@ -28,7 +30,7 @@ pub mod pallet {
     use sp_core::sr25519::Pair as Sr25519Pair;
     use sp_core::sr25519::{Public, Signature};
     use sp_runtime::{RuntimeDebug, SaturatedConversion};
-    use sp_std::collections::btree_set::BTreeSet;
+    use sp_std::collections::{btree_map::BTreeMap, btree_set::BTreeSet};
     use sp_std::prelude::*;
 
     /// Attestor struct
@@ -57,6 +59,7 @@ pub mod pallet {
         /// The currency in which fees are paid and contract balances are held.
         type Currency: ReservableCurrency<Self::AccountId>;
         type Call: From<Call<Self>>;
+        type AttestorAccounting: AttestorAccounting<AccountId = Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -78,16 +81,6 @@ pub mod pallet {
     #[pallet::getter(fn attestor_last_notification)]
     pub type AttestorLastNotify<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumber, ValueQuery>;
-
-    #[pallet::type_value]
-    pub(super) fn DefaultAttStakeMin<T: Config>() -> BalanceOf<T> {
-        T::Currency::minimum_balance()
-    }
-
-    #[pallet::storage]
-    #[pallet::getter(fn att_stake_min)]
-    pub(super) type AttStakeMin<T: Config> =
-        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultAttStakeMin<T>>;
 
     #[pallet::type_value]
     pub fn DefaultAttestorNum<T: Config>() -> u32 {
@@ -190,8 +183,7 @@ pub mod pallet {
                 !<Attestors<T>>::contains_key(&who),
                 Error::<T>::AlreadyRegistered
             );
-            let limit = <AttStakeMin<T>>::get();
-            T::Currency::reserve(&who, limit)?;
+            T::AttestorAccounting::attestor_staking(who.clone().into())?;
 
             let attestor = AttestorOf::<T> {
                 url,
@@ -258,17 +250,6 @@ pub mod pallet {
 
             Ok(().into())
         }
-
-        /// Called by root to set the min stake
-        #[pallet::weight(0)]
-        pub fn set_att_stake_min(
-            origin: OriginFor<T>,
-            stake: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
-            let _who = ensure_root(origin)?;
-            <AttStakeMin<T>>::put(stake);
-            Ok(().into())
-        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -278,6 +259,14 @@ pub mod pallet {
         ) -> Result<(), ()> {
             let call = Call::attestor_notify_chain(message, signature_raw_bytes);
             SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
+        }
+
+        pub fn get_all_attestors() -> BTreeMap<T::AccountId, usize> {
+            let mut result = BTreeMap::new();
+            let iterator = <Attestors<T>>::iter().map(|(accountId, attestor)| {
+                result.insert(accountId, attestor.geodes.len());
+            });
+            result
         }
 
         /// Return attestors' url and pubkey list for rpc.
@@ -385,6 +374,12 @@ pub mod pallet {
 
             // reset AttestorNum
             <AttestorNum<T>>::put(0);
+        }
+    }
+
+    impl<T: Config> Get<BTreeMap<T::AccountId, usize>> for Pallet<T> {
+        fn get() -> BTreeMap<T::AccountId, usize> {
+            Self::get_all_attestors()
         }
     }
 }

@@ -13,6 +13,7 @@ members = [
     "node-template/node",
     "node-template/pallets/template",
     "node-template/runtime",
+    "traits",
 ]
 
 [profile.release]

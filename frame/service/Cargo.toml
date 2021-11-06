@@ -1,37 +1,34 @@
 [package]
 authors = ["Automata Team"]
-description = 'FRAME pallet for defining liveness related logic.'
+description = 'FRAME pallet for defining service related logic.'
 edition = '2018'
 homepage = 'https://www.ata.network/'
 license = 'Apache-2.0'
-name = 'pallet-liveness'
-repository = "https://github.com/automata-network/automata-common"
+name = 'pallet-service'
+repository = "https://github.com/automata-network/automata"
 version = '0.1.0'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
+serde_json = { version = "1", optional = true }
+serde = { version = "1.0.119", optional = true, features = ["derive"] }
 codec = { default-features = false, features = ['derive'], package = 'parity-scale-codec', version = '2.0.0' }
 frame-system = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 frame-support = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-std = {git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false }
-serde_json = { version = "1", optional = true }
-serde = { version = "1.0.119", optional = true, features = ["derive"] }
 sp-runtime = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sp-std = {git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false }
+sha2 = { version = "0.9.5", default-features = false }
+sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 
 # local dependencies
 primitives = { package = "automata-primitives", path = "../../primitives", default-features = false }
-pallet-attestor = { default-features = false, path = '../attestor' }
-pallet-geode = { default-features = false, path = '../geode' }
-pallet-service = { version = "0.1.0", default-features = false, path = '../service' }
-automata-traits = { package = "automata-traits", path = "../../traits", default-features = false }
+pallet-geode = { version = "0.1.0", default-features = false, path = '../geode' }
 
 [dev-dependencies]
-sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+
 sp-io = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-balances = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-accounting = { path = "../accounting"}
 
 [features]
 default = ['std']
@@ -41,6 +38,8 @@ std = [
 	'frame-system/std',
 	'sp-std/std',
 	'sp-runtime/std',
-    'serde',
+	'serde',
 	'serde_json',
+	'sp-core/std',
+	'sha2/std'
 ]

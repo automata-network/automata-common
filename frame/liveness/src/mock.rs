@@ -1,16 +1,23 @@
 use crate as liveness;
-use frame_support::parameter_types;
+use frame_support::{
+    parameter_types,
+    traits::{OnFinalize, OnInitialize},
+};
 use frame_system as system;
+use primitives::*;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    Percent,
 };
 
+use frame_support::dispatch::DispatchResultWithPostInfo;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+use automata_traits::{AttestorAccounting, GeodeAccounting};
 
-pub const INIT_BALANCE: u128 = 100_100_100;
+pub const INIT_BALANCE: u64 = 100_100_100;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -23,6 +30,7 @@ frame_support::construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
         AttestorModule: pallet_attestor::{Pallet, Call, Storage, Event<T>},
         GeodeModule: pallet_geode::{Pallet, Call, Storage, Event<T>},
+        ServiceModule: pallet_service::{Pallet, Call, Storage, Event<T>},
         LivenessModule: liveness::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -33,10 +41,7 @@ parameter_types! {
 }
 
 impl system::Config for Test {
-    type BaseCallFilter = ();
-    type BlockWeights = ();
-    type BlockLength = ();
-    type DbWeight = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type Origin = Origin;
     type Call = Call;
     type Index = u64;
@@ -48,33 +53,35 @@ impl system::Config for Test {
     type Header = Header;
     type Event = Event;
     type BlockHashCount = BlockHashCount;
+    type DbWeight = ();
     type Version = ();
-    type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<u128>;
+    type AccountData = pallet_balances::AccountData<u64>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
+    type PalletInfo = PalletInfo;
+    type BlockWeights = ();
+    type BlockLength = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: u128 = 500;
-    pub const MaxReserves: u32 = 50;
+    pub const ExistentialDeposit: u64 = 500;
 }
 
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
     /// The type for recording an account's balance.
-    type Balance = u128;
+    type Balance = u64;
     /// The ubiquitous event type.
     type Event = Event;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
-    type MaxReserves = MaxReserves;
-    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type MaxReserves = ();
+    type ReserveIdentifier = [u8; 8];
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Test
@@ -85,18 +92,68 @@ where
     type OverarchingCall = Call;
 }
 
+impl AttestorAccounting for Test {
+    type AccountId = u64;
+    fn attestor_staking(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn attestor_unreserve(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+}
+
+impl GeodeAccounting for Test {
+    type AccountId = u64;
+    fn geode_staking(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+    fn geode_unreserve(who: Self::AccountId) -> DispatchResultWithPostInfo {
+        Ok(().into())
+    }
+}
+
 impl pallet_attestor::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
+    type AttestorAccounting = Test;
+}
+
+parameter_types! {
+    pub const DispatchConfirmationTimeout: BlockNumber = 12;
+    pub const PutOnlineTimeout: BlockNumber = 40;
+    pub const AttestationExpiryBlockNumber: BlockNumber = 30;
 }
 
 impl pallet_geode::Config for Test {
     type Event = Event;
+    type GeodeAccounting = Test;
+    type DispatchConfirmationTimeout = DispatchConfirmationTimeout;
+    type PutOnlineTimeout = PutOnlineTimeout;
+    type AttestationExpiryBlockNumber = AttestationExpiryBlockNumber;
+}
+
+impl pallet_service::Config for Test {
+    type Event = Event;
+}
+
+parameter_types! {
+    pub const ReportExpiryBlockNumber: BlockNumber = 10;
+    pub const ReportApprovalRatio: Percent = Percent::from_percent(50);
+    pub const UnknownExpiryBlockNumber: BlockNumber = 5760;
+    pub const DegradedInstantiatedExpiryBlockNumber: BlockNumber = 30;
+    pub const AttestorNotifyTimeoutBlockNumber: BlockNumber = 12;
+    pub const DefaultMinAttestorNum: u32 = 1;
 }
 
 impl liveness::Config for Test {
     type Event = Event;
+    type ReportExpiryBlockNumber = ReportExpiryBlockNumber;
+    type ReportApprovalRatio = ReportApprovalRatio;
+    type UnknownExpiryBlockNumber = UnknownExpiryBlockNumber;
+    type DegradedInstantiatedExpiryBlockNumber = DegradedInstantiatedExpiryBlockNumber;
+    type AttestorNotifyTimeoutBlockNumber = AttestorNotifyTimeoutBlockNumber;
+    type DefaultMinAttestorNum = DefaultMinAttestorNum;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -133,10 +190,6 @@ pub fn register_attestor(_attestor_account: <Test as system::Config>::AccountId)
     let min_stake = 100;
     let attestor_account = 1;
 
-    // set the min stake balance
-    AttestorModule::set_att_stake_min(Origin::root(), min_stake)
-        .map_err(|err| println!("{:?}", err));
-
     // successfully call register
     AttestorModule::attestor_register(
         Origin::signed(attestor_account),
@@ -164,4 +217,14 @@ pub fn provider_register_geode(
     };
 
     GeodeModule::provider_register_geode(Origin::signed(provider), geode);
+}
+
+pub fn run_to_block(n: u32) {
+    while System::block_number() < n as u64 {
+        LivenessModule::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        LivenessModule::on_initialize(System::block_number());
+    }
 }

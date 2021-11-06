@@ -1,7 +1,9 @@
 use crate::{Attestor, *};
 use frame_support::assert_ok;
 use frame_system::pallet_prelude::*;
+use hex_literal::hex;
 use mock::*;
+use primitives::AccountId;
 
 #[test]
 fn it_works_for_attestor_register() {
@@ -10,9 +12,6 @@ fn it_works_for_attestor_register() {
         let pubkey = vec![2];
         let min_stake = 100;
         let attestor_account = 1;
-
-        // set the min stake balance
-        assert_ok!(AttestorModule::set_att_stake_min(Origin::root(), min_stake));
 
         // successfully call register
         assert_ok!(AttestorModule::attestor_register(
@@ -31,10 +30,16 @@ fn it_works_for_attestor_register() {
                 geodes: Default::default(),
             }
         );
+    });
+}
 
-        // check the balance
-        let attestor_balance = Balances::free_balance(attestor_account);
-        assert_eq!(attestor_balance, INIT_BALANCE - min_stake);
+#[test]
+fn get_ss58_address_from_pubkey() {
+    new_test_ext().execute_with(|| {
+        let binary: [u8; 32] =
+            hex!["be7604b40c9eabbfdf62f2041a8b40e160799919e06c6395cda43083c9453b7b"].into();
+        let addr: AccountId = binary.into();
+        println!("{:?}", addr);
     });
 }
 
@@ -45,9 +50,6 @@ fn it_works_for_attestor_remove() {
         let pubkey = vec![2];
         let min_stake = 100;
         let attestor_account = 1;
-
-        // set the min stake balance
-        assert_ok!(AttestorModule::set_att_stake_min(Origin::root(), min_stake));
 
         // successfully call register
         assert_ok!(AttestorModule::attestor_register(
@@ -82,9 +84,6 @@ fn it_works_for_attestor_update() {
         let pubkey = vec![2];
         let min_stake = 100;
         let attestor_account = 1;
-
-        // set the min stake balance
-        assert_ok!(AttestorModule::set_att_stake_min(Origin::root(), min_stake));
 
         // successfully call register
         assert_ok!(AttestorModule::attestor_register(
@@ -125,17 +124,5 @@ fn it_works_for_attestor_update() {
                 geodes: Default::default(),
             }
         );
-    });
-}
-
-#[test]
-fn it_works_for_set_att_stake_min() {
-    new_test_ext().execute_with(|| {
-        let min_stake = 100;
-
-        assert_ok!(AttestorModule::set_att_stake_min(Origin::root(), min_stake));
-
-        // test the value is correct
-        assert_eq!(AttestorModule::att_stake_min(), min_stake);
     });
 }
