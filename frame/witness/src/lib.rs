@@ -16,7 +16,7 @@ pub mod pallet {
             self, AtLeast32Bit, AtLeast32BitUnsigned, BadOrigin, BlockNumberProvider, Bounded,
             CheckEqual, Dispatchable, Hash, Lookup, LookupError, MaybeDisplay, MaybeMallocSizeOf,
             MaybeSerializeDeserialize, Member, One, Saturating, SimpleBitOps, StaticLookup, Zero,
-            AccountIdConversion,
+            AccountIdConversion, SaturatedConversion,
         },
         DispatchError, Either, Perbill, RuntimeDebug,
     };
@@ -88,6 +88,8 @@ pub mod pallet {
         pub end_block_number: BlockNumber,
         pub snapshot: BlockHeight,
         pub data: Vec<u8>,
+        pub proposal_data: ProposalData,
+        pub callback_info: CallbackInfo,
     }
 
     impl<BlockNumber, BlockHeight> Proposal<BlockNumber, BlockHeight> {
@@ -95,13 +97,17 @@ pub mod pallet {
             start_block_number: BlockNumber,
             end_block_number: BlockNumber,
             snapshot: BlockHeight,
-            data: Vec<u8>,) -> Self {
+            data: Vec<u8>,
+            proposal_data: ProposalData,
+            callback_info: CallbackInfo,) -> Self {
                 Proposal {
                 author: author,
                 start_block_number: start_block_number,
                 end_block_number: end_block_number,
                 snapshot: snapshot,
                 data: data,
+                proposal_data: proposal_data,
+                callback_info: callback_info,
                 }
             }
     }
@@ -111,7 +117,7 @@ pub mod pallet {
         pub title: Vec<u8>,
         pub content: Vec<u8>,
         pub options: Vec<Vec<u8>>,
-        pub votes: Vec<u32>,
+        // pub votes: Vec<u32>,
         pub privacy_level: PrivacyLevel,
         pub data: Vec<u8>,
     }
@@ -120,14 +126,14 @@ pub mod pallet {
         pub fn new(title: Vec<u8>,
             content: Vec<u8>,
             options: Vec<Vec<u8>>,
-            votes: Vec<u32>,
+            // votes: Vec<u32>,
             privacy_level: PrivacyLevel,
             data: Vec<u8>,) -> Self {
                 ProposalData {
                     title: title,
                     content: content,
                     options: options,
-                    votes: votes,
+                    // votes: votes,
                     privacy_level: privacy_level,
                     data: data,
                 }
@@ -136,7 +142,7 @@ pub mod pallet {
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
     pub struct CallbackInfo {
-        pub callback_type: Vec<u8>,
+        pub callback_type: CallbackType,
         pub contract: EthAddress,
         pub function_name: Vec<u8>,
         pub function_args: Vec<Vec<u8>>,
@@ -144,7 +150,7 @@ pub mod pallet {
     }
 
     impl CallbackInfo {
-        pub fn new(callback_type: Vec<u8>,
+        pub fn new(callback_type: CallbackType,
             contract: EthAddress,
             function_name: Vec<u8>,
             function_args: Vec<Vec<u8>>,
@@ -157,6 +163,13 @@ pub mod pallet {
                     function_vals: function_vals,
                 }
             }
+    }
+
+    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+    pub enum CallbackType {
+        Solitidy,
+        Ink,
+        Pallet,
     }
 
     #[pallet::pallet]
@@ -210,9 +223,8 @@ pub mod pallet {
         #[pallet::constant]
         type MaxWorkSpaceSpecLength: Get<u32>;
 
-        #[pallet::constant]
-        type MaxProposalDataLength: Get<u32>;
-
+        
+        /// proposal data
         #[pallet::constant]
         type MaxProposalTitleLength: Get<u32>;
 
@@ -225,6 +237,10 @@ pub mod pallet {
         #[pallet::constant]
         type MaxProposalOptionDescLength: Get<u32>;
 
+        #[pallet::constant]
+        type MaxProposalDataLength: Get<u32>;
+
+        /// call back info
         #[pallet::constant]
         type MaxProposalCallBackLength: Get<u32>;
 
@@ -245,18 +261,38 @@ pub mod pallet {
     #[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Vote threshold has changed (new_threshold)
-        NewWorkSpace(T::AccountId, T::WorkSpaceId, EthAddress, Vec<u8>, Vec<u8>, EthAddress, ChainId)
+        /// Create a new work space
+        NewWorkSpace(Option<T::AccountId>, T::WorkSpaceId, EthAddress, Vec<u8>, Vec<u8>, EthAddress, ChainId),
+        /// Create a new proposal
+        NewProposal(Option<T::AccountId>, T::ProposalId, EthAddress, T::BlockNumber, T::BlockNumber, T::BlockHeight, Vec<u8>, ProposalData, CallbackInfo),
         
     }
 
     #[pallet::error]
     pub enum Error<T> {
-        /// 
+        /// workspace id overflow
         WorkSpaceIdOverFlow,
         InvalidWorkSpaceAdditionalDataLength,
         InvalidWorkSpaceNameLength,
         InvalidWorkSpaceSpecLength,
+        InvalidBlockNumberScope,
+
+        /// proposal 
+        ProposalIdOverFlow,
+        InvalidProposalEndBlockNumber,
+
+        /// proposal data
+        InvalidProposalTitleLength,
+        InvalidProposalContentLength,
+        InvalidProposalOptionLength,
+        InvalidProposalOptionDescLength,
+        InvalidProposalDataLength,
+
+        /// call back info
+        InvalidCallBackFunctionNameLength,
+        CallBackFunctionArgsValsNotMatch,
+        InvalidCallBackFunctionParameterLength,
+        InvalidCallBackFunctionValueLength,
        
     }
 
@@ -267,6 +303,11 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn current_work_space_id)]
     pub type CurrentWorkSpaceId<T: Config> = StorageValue<_, T::WorkSpaceId, ValueQuery>;
+
+
+    #[pallet::storage]
+    #[pallet::getter(fn current_proposal_id)]
+    pub type CurrentProposalId<T: Config> = StorageValue<_, T::ProposalId, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn work_space_map)]
@@ -294,8 +335,18 @@ pub mod pallet {
         _,
         Blake2_256,
         T::ProposalId,
-        Proposal<T::BlockNumber, T::BlockNumber>,
+        Proposal<T::BlockNumber, T::BlockHeight>,
         OptionQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn vote_map)]
+    pub type VoteMap<T: Config> = StorageMap<
+        _,
+        Blake2_256,
+        T::ProposalId,
+        Vec<u32>,
+        ValueQuery
     >;
 
     #[pallet::storage]
@@ -304,8 +355,8 @@ pub mod pallet {
         _,
         Blake2_256,
         T::BlockNumber,
-        Vec<Proposal<T::BlockNumber, T::BlockNumber>>,
-        OptionQuery
+        Vec<T::ProposalId>,
+        ValueQuery,
     >;
 
     #[pallet::hooks]
@@ -338,35 +389,35 @@ pub mod pallet {
 
             let who = ensure_signed(origin)?;
 
-            // valid check
-            Self::ensure_valid_workspace(&additional_data, &name, &spec)?;
-            let current_work_space_id = Self::current_work_space_id();
-            Self::add_workspace(max_proposal_id,
+            Self::add_workspace(Some(who),
+                max_proposal_id,
                 erc20_contract,
                 additional_data,
                 name.clone(),
                 spec.clone(),
                 contract,
-                chainId);
-            
-            // store event            
-            Self::deposit_event(Event::NewWorkSpace(who, current_work_space_id, erc20_contract, name, spec, contract, chainId));
-
-            Ok(().into())
+                chainId)
         }
 
         #[pallet::weight(0)]
         pub fn force_create_workspace(origin: OriginFor<T>, 
-            max_proposal_id: u32,
+            max_proposal_id:  T::ProposalId,
             erc20_contract: EthAddress,
             additional_data: Vec<u8>,
             name: Vec<u8>,
             spec: Vec<u8>,
             contract: EthAddress,
-            chainId: T::ChainId) -> DispatchResultWithPostInfo {
+            chainId: ChainId) -> DispatchResultWithPostInfo {
 
             ensure_root(origin)?;
-            Ok(().into())
+            Self::add_workspace(None,
+                max_proposal_id,
+                erc20_contract,
+                additional_data,
+                name.clone(),
+                spec.clone(),
+                contract,
+                chainId)
         }
 
         #[pallet::weight(0)]
@@ -374,6 +425,7 @@ pub mod pallet {
             workspace_id: T::WorkSpaceId) -> DispatchResultWithPostInfo {
 
             ensure_root(origin)?;
+            Self::remove_workspace(workspace_id);
             Ok(().into())
         }
 
@@ -387,7 +439,15 @@ pub mod pallet {
             proposalData: ProposalData,
             callbackInfo: CallbackInfo) -> DispatchResultWithPostInfo {
 
-            ensure_signed(origin)?;
+            let who = ensure_signed(origin)?;
+            Self::add_proposal(Some(who),
+                author, 
+                start_block_number, 
+                end_block_number, 
+                snapshot, 
+                data, 
+                proposalData, 
+                callbackInfo)?;
             Ok(().into())
         }
 
@@ -401,30 +461,44 @@ pub mod pallet {
             proposalData: ProposalData,
             callbackInfo: CallbackInfo) -> DispatchResultWithPostInfo {
 
-
             ensure_root(origin)?;
+            Self::add_proposal(None,
+                author, 
+                start_block_number, 
+                end_block_number, 
+                snapshot, 
+                data, 
+                proposalData, 
+                callbackInfo)?;
             Ok(().into())
         }
 
         #[pallet::weight(0)]
         pub fn force_remove_proposal(origin: OriginFor<T>, 
-            proposal_id: T::WorkSpaceId) -> DispatchResultWithPostInfo {
+            proposal_id: T::ProposalId) -> DispatchResultWithPostInfo {
 
             ensure_root(origin)?;
+
+            ProposalMap::<T>::remove(proposal_id);
             Ok(().into())
         }
 
         #[pallet::weight(0)]
         pub fn vote_for_proposal(origin: OriginFor<T>, 
-            proposal_id: T::WorkSpaceId) -> DispatchResultWithPostInfo {
+            proposal_id: T::ProposalId,
+            index: u32) -> DispatchResultWithPostInfo {
 
-            ensure_root(origin)?;
+            let who = ensure_signed(origin)?;
+            let current_block_number = <frame_system::Pallet<T>>::block_number();
+
+            Self::append_vote(Some(who), current_block_number, proposal_id, index);
+
             Ok(().into())
         }
 
         #[pallet::weight(0)]
         pub fn force_vote_for_proposal(origin: OriginFor<T>, 
-            proposal_id: T::WorkSpaceId) -> DispatchResultWithPostInfo {
+            proposal_id: T::ProposalId) -> DispatchResultWithPostInfo {
 
             ensure_root(origin)?;
             Ok(().into())
@@ -436,7 +510,124 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         // *** Utility methods ***
 
-        /// Checks if who is a relayer
+        pub fn append_vote(who: Option<T::AccountId>,
+            current_block_number: T::BlockNumber,
+            proposalId: T::ProposalId,
+            index: u32,
+        ) {
+            // ProposalExpirationMap::<T>::mutate(&end_block_number, |proposalIds| {
+            //     proposalIds.push(current_proposal_id);
+            //     proposalIds
+            // });
+
+            VoteMap::<T>::mutate(&proposalId, |votes| {
+                votes[index as usize] += 1
+
+            });
+        }
+
+        /// add a new workspace
+        pub fn add_workspace(who: Option<T::AccountId>,
+            max_proposal_id: T::ProposalId,
+            erc20_contract: EthAddress,
+            additional_data: Vec<u8>,
+            name: Vec<u8>,
+            spec: Vec<u8>,
+            contract: EthAddress,
+            chainId: ChainId) -> DispatchResultWithPostInfo {
+
+            // valid check
+            Self::ensure_valid_workspace(&additional_data, &name, &spec)?;
+            let current_work_space_id = Self::current_work_space_id();
+
+            // create new object
+
+            let new_work_space = WorkSpace::new(max_proposal_id,
+                erc20_contract.clone(),
+                additional_data.clone());
+            let new_work_space_addtional_data = WorkspaceAdditionalData::new(
+                name.clone(), spec.clone(), contract.clone(), chainId
+            );
+
+            // insert data into map
+            WorkSpaceMap::<T>::insert(current_work_space_id, new_work_space);
+            WorkspaceAdditionalDataMap::<T>::insert(current_work_space_id, new_work_space_addtional_data);
+
+            // update work space id
+            CurrentWorkSpaceId::<T>::put(current_work_space_id + 1_u32.into());
+            // store event            
+            Self::deposit_event(Event::NewWorkSpace(who, current_work_space_id, erc20_contract, name, spec, contract, chainId));
+
+            Ok(().into())
+        }
+
+
+        pub fn add_proposal(who: Option<T::AccountId>, 
+            author: EthAddress,
+            start_block_number: T::BlockNumber,
+            end_block_number: T::BlockNumber,
+            snapshot: T::BlockHeight,
+            data: Vec<u8>,
+            proposalData: ProposalData,
+            callbackInfo: CallbackInfo) -> DispatchResultWithPostInfo {
+            // check end block number
+            let current_block_number = <frame_system::Pallet<T>>::block_number();
+            ensure!(current_block_number < end_block_number, Error::<T>::InvalidProposalEndBlockNumber);
+
+            Self::ensure_valid_proposal(author, 
+                start_block_number, 
+                end_block_number, 
+                &snapshot, 
+                &data, 
+                &proposalData, 
+                &callbackInfo);
+
+            let current_proposal_id = Self::current_proposal_id();
+            let new_proposal = Proposal::new(author, 
+                start_block_number, 
+                end_block_number, 
+                snapshot.clone(), 
+                data.clone(), 
+                proposalData.clone(), 
+                callbackInfo.clone());
+            
+            ProposalMap::<T>::insert(current_proposal_id.clone(), new_proposal);
+            ProposalExpirationMap::<T>::mutate(&end_block_number, |proposalIds| {
+                proposalIds.push(current_proposal_id.clone())
+                
+            });
+
+            CurrentProposalId::<T>::put(current_proposal_id.clone() + 1_u32.into());
+
+            Self::deposit_event(Event::NewProposal(who,
+                current_proposal_id, 
+                author,
+                start_block_number, 
+                end_block_number, 
+                snapshot, 
+                data, 
+                proposalData, 
+                callbackInfo));
+
+            Ok(().into())
+       }
+
+
+        pub fn is_valid_vote(who: &T::AccountId) -> bool {
+            true
+        }
+
+        pub fn is_valid_call_back(who: &T::AccountId) -> bool {
+            true
+        }
+
+        /// remove workspace from storage
+        pub fn remove_workspace(workspace_id: T::WorkSpaceId) {
+            WorkSpaceMap::<T>::remove(workspace_id);
+            WorkspaceAdditionalDataMap::<T>::remove(workspace_id);
+        }
+
+        /// Checks
         pub fn ensure_valid_workspace( 
             additional_data: &Vec<u8>,
             name: &Vec<u8>,
@@ -450,42 +641,49 @@ pub mod pallet {
             Ok(().into())
         }
 
-        pub fn add_workspace(max_proposal_id: T::ProposalId,
-            erc20_contract: EthAddress,
-            additional_data: Vec<u8>,
-            name: Vec<u8>,
-            spec: Vec<u8>,
-            contract: EthAddress,
-            chainId: ChainId) {
-                // create new object
-                let current_work_space_id = Self::current_work_space_id();
 
+        pub fn ensure_valid_proposal(author: EthAddress,
+            start_block_number: T::BlockNumber,
+            end_block_number: T::BlockNumber,
+            snapshot: &T::BlockHeight,
+            data: &Vec<u8>,
+            proposalData: &ProposalData,
+            callbackInfo: &CallbackInfo) -> DispatchResultWithPostInfo {
+            ensure!(Self::current_proposal_id() != T::ProposalId::max_value(), Error::<T>::ProposalIdOverFlow);
 
-                let new_work_space = WorkSpace::new(max_proposal_id,
-                    erc20_contract.clone(),
-                    additional_data.clone());
-                let new_work_space_addtional_data = WorkspaceAdditionalData::new(
-                    name.clone(), spec.clone(), contract.clone(), chainId
-                );
+            ensure!(start_block_number < end_block_number, Error::<T>::InvalidBlockNumberScope);
 
-                // insert data into map
-                WorkSpaceMap::<T>::insert(current_work_space_id, new_work_space);
-                WorkspaceAdditionalDataMap::<T>::insert(current_work_space_id, new_work_space_addtional_data);
+            ensure!(data.len() as u32 > T::MaxProposalDataLength::get(), Error::<T>::WorkSpaceIdOverFlow);
 
-                // update work space id
-                CurrentWorkSpaceId::<T>::put(current_work_space_id + 1_u32.into());
+            Self::ensure_valid_proposal_data(proposalData);
+            Self::ensure_valid_callback_info(callbackInfo);
+
+            Ok(().into())
+        }
+
+        /// ensure proposal data valid
+        pub fn ensure_valid_proposal_data(proposalData: &ProposalData) -> DispatchResultWithPostInfo {
+            ensure!(proposalData.title.len() as u32 <= T::MaxProposalTitleLength::get(), Error::<T>::InvalidProposalTitleLength);
+            ensure!(proposalData.content.len() as u32 <= T::MaxProposalContentLength::get(), Error::<T>::InvalidProposalContentLength);
+            ensure!(proposalData.options.len() as u32 <= T::MaxProposalOptionLength::get(), Error::<T>::InvalidProposalOptionLength);
+            for option in proposalData.options.iter() {
+                ensure!(option.len() as u32 <= T::MaxProposalOptionDescLength::get(), Error::<T>::InvalidProposalOptionDescLength);
             }
+            ensure!(proposalData.data.len() as u32 <= T::MaxProposalDataLength::get(), Error::<T>::InvalidProposalDataLength);
 
-        pub fn is_valid_proposal(who: &T::AccountId) -> bool {
-            true
+            Ok(().into())
         }
 
-        pub fn is_valid_vote(who: &T::AccountId) -> bool {
-            true
-        }
-
-        pub fn is_valid_call_back(who: &T::AccountId) -> bool {
-            true
+        /// ensure callback info is valid
+        pub fn ensure_valid_callback_info(callback_info: &CallbackInfo) -> DispatchResultWithPostInfo {
+            ensure!(T::MaxProposalCallBackFunctionNameLength::get() >= callback_info.function_name.len() as u32, Error::<T>::InvalidCallBackFunctionNameLength);
+            ensure!(callback_info.function_args.len() == callback_info.function_vals.len(), Error::<T>::CallBackFunctionArgsValsNotMatch);
+            
+            for index in 0..callback_info.function_args.len() {
+                ensure!(T::MaxProposalCallBackFunctionParameterLength::get() >= callback_info.function_args[index].len() as u32, Error::<T>::InvalidCallBackFunctionParameterLength);
+                ensure!(T::MaxProposalCallBackFunctionValueLength::get() >= callback_info.function_vals[index].len() as u32, Error::<T>::InvalidCallBackFunctionValueLength);
+            }
+            Ok(().into())
         }
 
     }
