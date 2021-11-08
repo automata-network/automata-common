@@ -293,6 +293,12 @@ pub mod pallet {
         CallBackFunctionArgsValsNotMatch,
         InvalidCallBackFunctionParameterLength,
         InvalidCallBackFunctionValueLength,
+
+        /// vote
+        ProposalNotExists,
+        ProposalExpired,
+        InvalidVoteIndex,
+
        
     }
 
@@ -364,11 +370,11 @@ pub mod pallet {
 		
 
 		/// Block finalization
-		fn on_finalize(_n: BlockNumberFor<T>) {
+		fn on_finalize(block_number: BlockNumberFor<T>) {
 
-			// ProposalMap::<T>::retain(|key, proposal| {
-            //     true
-            // });
+			let proposalIds = ProposalExpirationMap::<T>::get(block_number);
+
+            ProposalExpirationMap::<T>::remove(block_number);
 		}
 	}
 
@@ -515,14 +521,12 @@ pub mod pallet {
             proposalId: T::ProposalId,
             index: u32,
         ) {
-            // ProposalExpirationMap::<T>::mutate(&end_block_number, |proposalIds| {
-            //     proposalIds.push(current_proposal_id);
-            //     proposalIds
-            // });
+            Self::ensure_valid_vote(current_block_number,
+                proposalId.clone(), 
+                index);
 
             VoteMap::<T>::mutate(&proposalId, |votes| {
                 votes[index as usize] += 1
-
             });
         }
 
@@ -612,13 +616,24 @@ pub mod pallet {
             Ok(().into())
        }
 
-
-        pub fn is_valid_vote(who: &T::AccountId) -> bool {
-            true
-        }
-
-        pub fn is_valid_call_back(who: &T::AccountId) -> bool {
-            true
+        pub fn ensure_valid_vote(current_block_number: T::BlockNumber,
+            proposalId: T::ProposalId,
+            index: u32) -> DispatchResultWithPostInfo {
+            
+            match ProposalMap::<T>::get(proposalId) {
+                Some(proposal) => {
+                    if proposal.end_block_number < current_block_number {
+                        Err(Error::<T>::ProposalExpired.into())
+                    } else {
+                        if proposal.proposal_data.options.len() as u32 >= index {
+                            Err(Error::<T>::InvalidVoteIndex.into())
+                        } else {
+                            Ok(().into()) 
+                        }
+                    }
+                },
+                None => Err(Error::<T>::ProposalNotExists.into()),
+            }
         }
 
         /// remove workspace from storage
@@ -627,7 +642,7 @@ pub mod pallet {
             WorkspaceAdditionalDataMap::<T>::remove(workspace_id);
         }
 
-        /// Checks
+        /// ensure valid workspace
         pub fn ensure_valid_workspace( 
             additional_data: &Vec<u8>,
             name: &Vec<u8>,
@@ -640,7 +655,6 @@ pub mod pallet {
 
             Ok(().into())
         }
-
 
         pub fn ensure_valid_proposal(author: EthAddress,
             start_block_number: T::BlockNumber,
