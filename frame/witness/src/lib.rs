@@ -37,6 +37,11 @@ pub mod pallet {
         Public,
     }
 
+    #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug)]
+    pub enum ProposalStatus {
+        OK,
+    }
+
     type EthAddress = [u8; 20];
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -265,7 +270,12 @@ pub mod pallet {
         NewWorkSpace(Option<T::AccountId>, T::WorkSpaceId, EthAddress, Vec<u8>, Vec<u8>, EthAddress, ChainId),
         /// Create a new proposal
         NewProposal(Option<T::AccountId>, T::ProposalId, EthAddress, T::BlockNumber, T::BlockNumber, T::BlockHeight, Vec<u8>, ProposalData, CallbackInfo),
-        
+        /// 
+        NewVote(Option<T::AccountId>, T::ProposalId, u32),
+
+        ///
+        ProposalFinalized(T::BlockNumber, T::ProposalId, u32),
+
     }
 
     #[pallet::error]
@@ -373,11 +383,23 @@ pub mod pallet {
 		fn on_finalize(block_number: BlockNumberFor<T>) {
 
 			let proposalIds = ProposalExpirationMap::<T>::get(block_number);
+            for proposal_id in proposalIds.iter() {
+                let votes = VoteMap::<T>::get(proposal_id);
+                let mut max_vote = 0;
+                let mut max_vote_index = 0;
 
+                for (index, item) in votes.iter().enumerate() {
+                    if *item > max_vote {
+                        max_vote = *item;
+                        max_vote_index = index;
+                    }
+                }
+                Self::deposit_event(Event::ProposalFinalized(block_number, proposal_id.clone(), max_vote_index as u32,));
+            }
+            
             ProposalExpirationMap::<T>::remove(block_number);
 		}
 	}
-
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
