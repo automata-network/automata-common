@@ -12,7 +12,7 @@ pub mod pallet {
 
     use sp_runtime::{
         traits::{
-            AtLeast32BitUnsigned, Bounded, Dispatchable,
+            AtLeast32BitUnsigned, Bounded,
         },
         RuntimeDebug,
     };
@@ -115,7 +115,6 @@ pub mod pallet {
         pub title: Vec<u8>,
         pub content: Vec<u8>,
         pub options: Vec<Vec<u8>>,
-        // pub votes: Vec<u32>,
         pub privacy_level: PrivacyLevel,
         pub data: Vec<u8>,
     }
@@ -124,14 +123,12 @@ pub mod pallet {
         pub fn new(title: Vec<u8>,
             content: Vec<u8>,
             options: Vec<Vec<u8>>,
-            // votes: Vec<u32>,
             privacy_level: PrivacyLevel,
             data: Vec<u8>,) -> Self {
                 ProposalData {
                     title: title,
                     content: content,
                     options: options,
-                    // votes: votes,
                     privacy_level: privacy_level,
                     data: data,
                 }
@@ -179,22 +176,9 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// Origin used to administer the pallet
         type AdminOrigin: EnsureOrigin<Self::Origin>;
-        /// Proposed dispatchable call
-        type Proposal: Parameter
-            + Dispatchable<Origin = Self::Origin>
-            + EncodeLike
-            + GetDispatchInfo;
         
         /// workspace identity type
         type WorkSpaceId: Parameter
-            + EncodeLike
-            + AtLeast32BitUnsigned
-            + Default
-            + Clone
-            + Copy;
-
-        /// workspace identity type
-        type ChainId: Parameter
             + EncodeLike
             + AtLeast32BitUnsigned
             + Default
@@ -207,7 +191,7 @@ pub mod pallet {
         + AtLeast32BitUnsigned
         + Default;
 
-        /// proposal identity type
+        /// block height for block chain like Ethereum
         type BlockHeight: Parameter
         + EncodeLike
         + AtLeast32BitUnsigned;
@@ -221,8 +205,6 @@ pub mod pallet {
         #[pallet::constant]
         type MaxWorkSpaceSpecLength: Get<u32>;
 
-        
-        /// proposal data
         #[pallet::constant]
         type MaxProposalTitleLength: Get<u32>;
 
@@ -238,7 +220,6 @@ pub mod pallet {
         #[pallet::constant]
         type MaxProposalDataLength: Get<u32>;
 
-        /// call back info
         #[pallet::constant]
         type MaxProposalCallBackLength: Get<u32>;
 
@@ -381,15 +362,18 @@ pub mod pallet {
     #[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		
-		/// Block finalization
+		/// Block finalization to deal with all expired proposals
 		fn on_finalize(block_number: BlockNumberFor<T>) {
 
 			let proposal_ids = ProposalExpirationMap::<T>::get(block_number);
+
+            // iterate the proposal
             for proposal_id in proposal_ids.iter() {
                 let votes = VoteMap::<T>::get(proposal_id);
                 let mut max_vote = 0;
                 let mut max_vote_index = 0;
 
+                // iterate votes for all options, find the maximum one
                 for (index, item) in votes.iter().enumerate() {
                     if *item > max_vote {
                         max_vote = *item;
@@ -399,6 +383,7 @@ pub mod pallet {
                 Self::deposit_event(Event::ProposalFinalized(block_number, proposal_id.clone(), max_vote_index as u32,));
             }
             
+            // remove the entry for current block number
             ProposalExpirationMap::<T>::remove(block_number);
 		}
 	}
@@ -546,9 +531,6 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        // *** Utility methods ***
-        
-
         /// add a new workspace
         pub fn add_workspace(who: Option<T::AccountId>,
             max_proposal_id: T::ProposalId,
@@ -683,7 +665,11 @@ pub mod pallet {
 
         /// remove workspace from storage
         pub fn remove_workspace(workspace_id: T::WorkSpaceId) {
+
+            // remove basic data
             WorkSpaceMap::<T>::remove(workspace_id);
+
+            // remove additional data
             WorkspaceAdditionalDataMap::<T>::remove(workspace_id);
         }
 
@@ -694,9 +680,12 @@ pub mod pallet {
             spec: &Vec<u8>) -> DispatchResultWithPostInfo {
 
             ensure!(Self::current_work_space_id() != T::WorkSpaceId::max_value(), Error::<T>::WorkSpaceIdOverFlow);
-            ensure!((additional_data.len() as u32) < T::MaxWorkSpaceAdditionalDataLength::get(), Error::<T>::InvalidWorkSpaceAdditionalDataLength);
-            ensure!((name.len() as u32) < T::MaxWorkSpaceNameLength::get(), Error::<T>::InvalidWorkSpaceNameLength);
-            ensure!((spec.len() as u32) < T::MaxWorkSpaceSpecLength::get(), Error::<T>::InvalidWorkSpaceSpecLength);
+
+            ensure!(additional_data.len() as u32 <= T::MaxWorkSpaceAdditionalDataLength::get(), Error::<T>::InvalidWorkSpaceAdditionalDataLength);
+            
+            ensure!(name.len() as u32 <= T::MaxWorkSpaceNameLength::get(), Error::<T>::InvalidWorkSpaceNameLength);
+            
+            ensure!(spec.len() as u32 <= T::MaxWorkSpaceSpecLength::get(), Error::<T>::InvalidWorkSpaceSpecLength);
 
             Ok(().into())
         }
@@ -707,13 +696,15 @@ pub mod pallet {
             data: &Vec<u8>,
             proposal_data: &ProposalData,
             callback_info: &CallbackInfo) -> DispatchResultWithPostInfo {
+
             ensure!(Self::current_proposal_id() != T::ProposalId::max_value(), Error::<T>::ProposalIdOverFlow);
 
             ensure!(start_block_number < end_block_number, Error::<T>::InvalidBlockNumberScope);
 
-            ensure!(data.len() as u32 > T::MaxProposalDataLength::get(), Error::<T>::WorkSpaceIdOverFlow);
+            ensure!(data.len() as u32 <= T::MaxProposalDataLength::get(), Error::<T>::InvalidProposalDataLength);
 
             Self::ensure_valid_proposal_data(proposal_data)?;
+
             Self::ensure_valid_callback_info(callback_info)?;
 
             Ok(().into())
@@ -721,12 +712,17 @@ pub mod pallet {
 
         /// ensure proposal data valid
         pub fn ensure_valid_proposal_data(proposal_data: &ProposalData) -> DispatchResultWithPostInfo {
+
             ensure!(proposal_data.title.len() as u32 <= T::MaxProposalTitleLength::get(), Error::<T>::InvalidProposalTitleLength);
+
             ensure!(proposal_data.content.len() as u32 <= T::MaxProposalContentLength::get(), Error::<T>::InvalidProposalContentLength);
+
             ensure!(proposal_data.options.len() as u32 <= T::MaxProposalOptionLength::get(), Error::<T>::InvalidProposalOptionLength);
+
             for option in proposal_data.options.iter() {
                 ensure!(option.len() as u32 <= T::MaxProposalOptionDescLength::get(), Error::<T>::InvalidProposalOptionDescLength);
             }
+
             ensure!(proposal_data.data.len() as u32 <= T::MaxProposalDataLength::get(), Error::<T>::InvalidProposalDataLength);
 
             Ok(().into())
@@ -734,15 +730,18 @@ pub mod pallet {
 
         /// ensure callback info is valid
         pub fn ensure_valid_callback_info(callback_info: &CallbackInfo) -> DispatchResultWithPostInfo {
-            ensure!(T::MaxProposalCallBackFunctionNameLength::get() >= callback_info.function_name.len() as u32, Error::<T>::InvalidCallBackFunctionNameLength);
+
+            ensure!(callback_info.function_name.len() as u32 <= T::MaxProposalCallBackFunctionNameLength::get(), Error::<T>::InvalidCallBackFunctionNameLength);
+            
             ensure!(callback_info.function_args.len() == callback_info.function_vals.len(), Error::<T>::CallBackFunctionArgsValsNotMatch);
             
             for index in 0..callback_info.function_args.len() {
-                ensure!(T::MaxProposalCallBackFunctionParameterLength::get() >= callback_info.function_args[index].len() as u32, Error::<T>::InvalidCallBackFunctionParameterLength);
-                ensure!(T::MaxProposalCallBackFunctionValueLength::get() >= callback_info.function_vals[index].len() as u32, Error::<T>::InvalidCallBackFunctionValueLength);
+                ensure!(callback_info.function_args[index].len() as u32 <= T::MaxProposalCallBackFunctionParameterLength::get(), Error::<T>::InvalidCallBackFunctionParameterLength);
+                
+                ensure!(callback_info.function_vals[index].len() as u32 <= T::MaxProposalCallBackFunctionValueLength::get(), Error::<T>::InvalidCallBackFunctionValueLength);
             }
+
             Ok(().into())
         }
-
     }
 }

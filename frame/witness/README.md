@@ -52,29 +52,3 @@ CallbackInfo:
     "function_vals": "Vec<String>"
 }
 
-
-## method
-create workspace
-create proposal
-vote for proposal 
-
-sudo only, remove workspace, remove proposal, set vote. create workspace, create proposal
-
-hook. on finalize. check each proposal and try to finalized them. 
-
-## parameter
-max additional data len 
-basic reserve fee
-reserve fee per byte 
-max workspace name
-max workspace desc
-
-
-max function name
-max function args len
-max function vals len 
-
-## question 
-1. reserve token?
-2. origin priviledge
-3. 
