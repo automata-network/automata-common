@@ -37,20 +37,17 @@ pub mod pallet {
     type EthAddress = [u8; 20];
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-    pub struct WorkSpace<ProposalId> {
-        pub max_proposal_id: ProposalId,
+    pub struct WorkSpace {
         pub erc20_contract: EthAddress,
         pub additional_data: Vec<u8>,
     }
 
-    impl<ProposalId> WorkSpace<ProposalId> {
+    impl WorkSpace {
         pub fn new(
-            max_proposal_id: ProposalId,
             erc20_contract: EthAddress,
             additional_data: Vec<u8>,
         ) -> Self {
             WorkSpace {
-                max_proposal_id: max_proposal_id,
                 erc20_contract: erc20_contract,
                 additional_data: additional_data,
             }
@@ -77,7 +74,8 @@ pub mod pallet {
     }
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-    pub struct Proposal<BlockNumber, BlockHeight> {
+    pub struct Proposal<WorkspaceId, BlockNumber, BlockHeight> {
+        pub workspace_id: WorkspaceId,
         pub author: EthAddress,
         pub start_block_number: BlockNumber,
         pub end_block_number: BlockNumber,
@@ -87,8 +85,9 @@ pub mod pallet {
         pub callback_info: CallbackInfo,
     }
 
-    impl<BlockNumber, BlockHeight> Proposal<BlockNumber, BlockHeight> {
+    impl<WorkspaceId, BlockNumber, BlockHeight> Proposal<WorkspaceId, BlockNumber, BlockHeight> {
         pub fn new(
+            workspace_id: WorkspaceId,
             author: EthAddress,
             start_block_number: BlockNumber,
             end_block_number: BlockNumber,
@@ -98,6 +97,7 @@ pub mod pallet {
             callback_info: CallbackInfo,
         ) -> Self {
             Proposal {
+                workspace_id: workspace_id,
                 author: author,
                 start_block_number: start_block_number,
                 end_block_number: end_block_number,
@@ -247,6 +247,7 @@ pub mod pallet {
         NewProposal(
             Option<T::AccountId>,
             T::ProposalId,
+            T::WorkSpaceId,
             EthAddress,
             T::BlockNumber,
             T::BlockNumber,
@@ -265,6 +266,8 @@ pub mod pallet {
     pub enum Error<T> {
         /// workspace id overflow
         WorkSpaceIdOverFlow,
+        /// workspace id not created yet
+        WorkSpaceNotExists,
         /// workspace additional data length too long
         InvalidWorkSpaceAdditionalDataLength,
         /// workspace name too long
@@ -317,7 +320,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn work_space_map)]
     pub type WorkSpaceMap<T: Config> =
-        StorageMap<_, Blake2_256, T::WorkSpaceId, WorkSpace<T::ProposalId>, OptionQuery>;
+        StorageMap<_, Blake2_256, T::WorkSpaceId, WorkSpace, OptionQuery>;
 
     /// worksapce additional data map store additional data for workspace
     #[pallet::storage]
@@ -332,7 +335,7 @@ pub mod pallet {
         _,
         Blake2_256,
         T::ProposalId,
-        Proposal<T::BlockNumber, T::BlockHeight>,
+        Proposal<T::WorkSpaceId, T::BlockNumber, T::BlockHeight>,
         OptionQuery,
     >;
 
@@ -385,7 +388,6 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub fn create_workspace(
             origin: OriginFor<T>,
-            max_proposal_id: T::ProposalId,
             erc20_contract: EthAddress,
             additional_data: Vec<u8>,
             name: Vec<u8>,
@@ -397,7 +399,6 @@ pub mod pallet {
 
             Self::add_workspace(
                 Some(who),
-                max_proposal_id,
                 erc20_contract,
                 additional_data,
                 name.clone(),
@@ -411,7 +412,6 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub fn force_create_workspace(
             origin: OriginFor<T>,
-            max_proposal_id: T::ProposalId,
             erc20_contract: EthAddress,
             additional_data: Vec<u8>,
             name: Vec<u8>,
@@ -422,7 +422,6 @@ pub mod pallet {
             ensure_root(origin)?;
             Self::add_workspace(
                 None,
-                max_proposal_id,
                 erc20_contract,
                 additional_data,
                 name.clone(),
@@ -447,6 +446,7 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub fn create_proposal(
             origin: OriginFor<T>,
+            workspace_id: T::WorkSpaceId,
             author: EthAddress,
             start_block_number: T::BlockNumber,
             end_block_number: T::BlockNumber,
@@ -458,6 +458,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             Self::add_proposal(
                 Some(who),
+                workspace_id,
                 author,
                 start_block_number,
                 end_block_number,
@@ -473,6 +474,7 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub fn force_create_proposal(
             origin: OriginFor<T>,
+            workspace_id: T::WorkSpaceId,
             author: EthAddress,
             start_block_number: T::BlockNumber,
             end_block_number: T::BlockNumber,
@@ -484,6 +486,7 @@ pub mod pallet {
             ensure_root(origin)?;
             Self::add_proposal(
                 None,
+                workspace_id,
                 author,
                 start_block_number,
                 end_block_number,
@@ -540,7 +543,6 @@ pub mod pallet {
         /// add a new workspace
         pub fn add_workspace(
             who: Option<T::AccountId>,
-            max_proposal_id: T::ProposalId,
             erc20_contract: EthAddress,
             additional_data: Vec<u8>,
             name: Vec<u8>,
@@ -554,7 +556,6 @@ pub mod pallet {
 
             // create new object
             let new_work_space = WorkSpace::new(
-                max_proposal_id,
                 erc20_contract.clone(),
                 additional_data.clone(),
             );
@@ -591,6 +592,7 @@ pub mod pallet {
         /// add new proposal
         pub fn add_proposal(
             who: Option<T::AccountId>,
+            workspace_id: T::WorkSpaceId,
             author: EthAddress,
             start_block_number: T::BlockNumber,
             end_block_number: T::BlockNumber,
@@ -608,6 +610,7 @@ pub mod pallet {
 
             // check all parameters
             Self::ensure_valid_proposal(
+                workspace_id,
                 start_block_number,
                 end_block_number,
                 &data,
@@ -618,6 +621,7 @@ pub mod pallet {
             // create new object
             let current_proposal_id = Self::current_proposal_id();
             let new_proposal = Proposal::new(
+                workspace_id,
                 author,
                 start_block_number,
                 end_block_number,
@@ -640,6 +644,7 @@ pub mod pallet {
             Self::deposit_event(Event::NewProposal(
                 who,
                 current_proposal_id,
+                workspace_id,
                 author,
                 start_block_number,
                 end_block_number,
@@ -734,12 +739,17 @@ pub mod pallet {
 
         /// ensure proposal is valid
         pub fn ensure_valid_proposal(
+            workspace_id: T::WorkSpaceId,
             start_block_number: T::BlockNumber,
             end_block_number: T::BlockNumber,
             data: &Vec<u8>,
             proposal_data: &ProposalData,
             callback_info: &CallbackInfo,
         ) -> DispatchResultWithPostInfo {
+            ensure!(
+                WorkSpaceMap::<T>::get(workspace_id).is_some(),
+                Error::<T>::WorkSpaceNotExists
+            );
             ensure!(
                 Self::current_proposal_id() != T::ProposalId::max_value(),
                 Error::<T>::ProposalIdOverFlow
