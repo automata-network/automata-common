@@ -43,10 +43,7 @@ pub mod pallet {
     }
 
     impl WorkSpace {
-        pub fn new(
-            erc20_contract: EthAddress,
-            additional_data: Vec<u8>,
-        ) -> Self {
+        pub fn new(erc20_contract: EthAddress, additional_data: Vec<u8>) -> Self {
             WorkSpace {
                 erc20_contract: erc20_contract,
                 additional_data: additional_data,
@@ -555,10 +552,7 @@ pub mod pallet {
             let current_work_space_id = Self::current_work_space_id();
 
             // create new object
-            let new_work_space = WorkSpace::new(
-                erc20_contract.clone(),
-                additional_data.clone(),
-            );
+            let new_work_space = WorkSpace::new(erc20_contract.clone(), additional_data.clone());
             let new_work_space_addtional_data = WorkspaceAdditionalData::new(
                 name.clone(),
                 spec.clone(),
