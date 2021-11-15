@@ -88,7 +88,7 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-    pub const TestChainId: u8 = 5;
+    pub const TestChainId: u8 = 255;
     pub const ProposalLifetime: u64 = 100;
 }
 
@@ -101,7 +101,8 @@ impl bridge::Config for Test {
 }
 
 parameter_types! {
-    pub const NativeTokenResourceId: [u8; 32] = hex!("0000000000000000000000A2120b9e674d3fC3875f415A7DF52e382F14122501");
+    pub const DefaultDestBridgeChainId: u8 = 1;
+    pub const BridgeTokenId: [u8; 32] = hex!("0000000000000000000000A2120b9e674d3fC3875f415A7DF52e382F14122501");
     pub const EnableFee: bool = true;
 }
 
@@ -109,9 +110,9 @@ impl Config for Test {
     type Event = Event;
     type BridgeOrigin = bridge::EnsureBridge<Test>;
     type Currency = Balances;
-    type BridgeTokenId = NativeTokenResourceId;
+    type DefaultDestBridgeChainId = DefaultDestBridgeChainId;
+    type BridgeTokenId = BridgeTokenId;
     type OnFeePay = ();
-    type EnableFee = EnableFee;
 }
 
 parameter_types! {
