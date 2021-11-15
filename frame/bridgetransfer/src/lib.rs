@@ -1,11 +1,6 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
-
 pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
@@ -44,13 +39,13 @@ pub mod pallet {
         type Currency: Currency<Self::AccountId>;
 
         #[pallet::constant]
-        type BridgeTokenId: Get<ResourceId>;
+        type DefaultDestBridgeChainId: Get<bridge::BridgeChainId>;
+
+        #[pallet::constant]
+        type DefaultResourceId: Get<ResourceId>;
 
         /// The handler to absorb the fee.
         type OnFeePay: OnUnbalanced<NegativeImbalanceOf<Self>>;
-
-        #[pallet::constant]
-        type EnableFee: Get<bool>;
     }
 
     #[pallet::event]
@@ -69,6 +64,7 @@ pub mod pallet {
         InvalidFeeOption,
         FeeOptionsMissing,
         InsufficientBalance,
+        DefaultDestChainIdResourceIdMismatch,
     }
 
     #[pallet::hooks]
@@ -103,6 +99,7 @@ pub mod pallet {
             amount: BalanceOf<T>,
             recipient: Vec<u8>,
             dest_id: bridge::BridgeChainId,
+            resource_id: Option<ResourceId>,
         ) -> DispatchResultWithPostInfo {
             let source = ensure_signed(origin)?;
             ensure!(
@@ -110,32 +107,40 @@ pub mod pallet {
                 Error::<T>::InvalidTransfer
             );
             let bridge_id = <bridge::Pallet<T>>::account_id();
-            if T::EnableFee::get() {
-                ensure!(
-                    BridgeFee::<T>::contains_key(&dest_id),
-                    Error::<T>::FeeOptionsMissing
-                );
-                let (min_fee, fee_scale) = Self::bridge_fee(dest_id);
-                let fee_estimated = amount * fee_scale.into() / 1000u32.into();
-                let fee = if fee_estimated > min_fee {
-                    fee_estimated
-                } else {
-                    min_fee
-                };
-                let free_balance = T::Currency::free_balance(&source);
-                ensure!(
-                    free_balance >= (amount + fee),
-                    Error::<T>::InsufficientBalance
-                );
 
-                let imbalance = T::Currency::withdraw(
-                    &source,
-                    fee,
-                    WithdrawReasons::FEE,
-                    ExistenceRequirement::AllowDeath,
-                )?;
-                T::OnFeePay::on_unbalanced(imbalance);
-            }
+            ensure!(
+                BridgeFee::<T>::contains_key(&dest_id),
+                Error::<T>::FeeOptionsMissing
+            );
+            let (min_fee, fee_scale) = Self::bridge_fee(dest_id);
+            let fee_estimated = amount * fee_scale.into() / 1000u32.into();
+            let fee = if fee_estimated > min_fee {
+                fee_estimated
+            } else {
+                min_fee
+            };
+            let free_balance = T::Currency::free_balance(&source);
+            ensure!(
+                free_balance >= (amount + fee),
+                Error::<T>::InsufficientBalance
+            );
+
+            let rid = match resource_id {
+                Some(v) => v,
+                None => {
+                    ensure!(dest_id == T::DefaultDestBridgeChainId::get(), Error::<T>::DefaultDestChainIdResourceIdMismatch);
+                    T::DefaultResourceId::get()
+                }
+            };
+
+            let imbalance = T::Currency::withdraw(
+                &source,
+                fee,
+                WithdrawReasons::FEE,
+                ExistenceRequirement::AllowDeath,
+            )?;
+            T::OnFeePay::on_unbalanced(imbalance);
+
             <T as Config>::Currency::transfer(
                 &source,
                 &bridge_id,
@@ -145,7 +150,7 @@ pub mod pallet {
 
             <bridge::Pallet<T>>::transfer_fungible(
                 dest_id,
-                T::BridgeTokenId::get(),
+                rid,
                 recipient,
                 U256::from(amount.saturated_into::<u128>()),
             )

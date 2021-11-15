@@ -101,7 +101,8 @@ impl bridge::Config for Test {
 }
 
 parameter_types! {
-    pub const NativeTokenResourceId: [u8; 32] = hex!("0000000000000000000000A2120b9e674d3fC3875f415A7DF52e382F14122501");
+    pub const DefaultDestBridgeChainId: BridgeChainId = 1;
+    pub const DefaultResourceId: [u8; 32] = hex!("0000000000000000000000A2120b9e674d3fC3875f415A7DF52e382F14122501");
     pub const EnableFee: bool = true;
 }
 
@@ -109,7 +110,8 @@ impl Config for Test {
     type Event = Event;
     type BridgeOrigin = bridge::EnsureBridge<Test>;
     type Currency = Balances;
-    type BridgeTokenId = NativeTokenResourceId;
+    type DefaultDestBridgeChainId = DefaultDestBridgeChainId;
+    type DefaultResourceId = DefaultResourceId;
     type OnFeePay = ();
     type EnableFee = EnableFee;
 }
