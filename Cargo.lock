@@ -367,6 +367,7 @@ dependencies = [
  "frame-system",
  "impl-trait-for-tuples",
  "parity-scale-codec",
+ "serde",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
@@ -377,6 +378,7 @@ dependencies = [
 name = "automata-traits"
 version = "0.1.0"
 dependencies = [
+ "automata-primitives",
  "frame-support",
  "parity-scale-codec",
 ]

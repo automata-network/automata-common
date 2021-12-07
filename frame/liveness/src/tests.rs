@@ -1,6 +1,7 @@
-use crate::{mock::*, Error, ReportType};
+use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 use pallet_attestor::Attestor;
+use primitives::attestor::ReportType;
 
 #[test]
 fn it_works_attestor_attest_geode() {
