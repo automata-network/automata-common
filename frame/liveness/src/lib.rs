@@ -55,16 +55,6 @@ pub mod pallet {
         }
     }
 
-    /// The geode struct shows its status
-    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
-    pub struct Report<AccountId: Ord> {
-        pub start: BlockNumber,
-        pub attestors: BTreeSet<AccountId>,
-    }
-
-    pub type ReportOf<T> = Report<<T as frame_system::Config>::AccountId>;
-
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
     pub trait Config:
@@ -100,10 +90,6 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     // The pallet's runtime storage items.
-    #[pallet::storage]
-    #[pallet::getter(fn reports)]
-    pub(super) type Reports<T: Config> =
-        StorageMap<_, Blake2_128Concat, (T::AccountId, u8), ReportOf<T>, ValueQuery>;
 
     #[pallet::type_value]
     pub fn DefaultMinAttestorNum<T: Config>() -> u32 {
