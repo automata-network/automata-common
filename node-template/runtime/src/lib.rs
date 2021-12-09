@@ -296,6 +296,18 @@ impl pallet_economics::Config for Runtime {
     type WeightInfo = pallet_economics::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+    pub const MaximumAttackCount: u32 = 2;
+    pub const MaximumAttackerNum: u32 = 5;
+}
+
+impl pallet_game::Config for Runtime {
+    type Event = Event;
+    type MaximumAttackCount = MaximumAttackCount;
+    type MaximumAttackerNum = MaximumAttackerNum;
+    type WeightInfo = pallet_game::weights::SubstrateWeight<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -315,6 +327,7 @@ construct_runtime!(
         TemplateModule: pallet_template::{Pallet, Call, Storage, Event<T>},
         Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>},
         Economics: pallet_economics::{Pallet, Call, Event<T>},
+        Game: pallet_game::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -494,6 +507,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_template, TemplateModule);
             list_benchmark!(list, extra, pallet_vesting, Vesting);
             list_benchmark!(list, extra, pallet_economics, Economics);
+            list_benchmark!(list, extra, pallet_game, Game);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -530,6 +544,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_template, TemplateModule);
             add_benchmark!(params, batches, pallet_vesting, Vesting);
             add_benchmark!(params, batches, pallet_economics, Economics);
+            add_benchmark!(params, batches, pallet_game, Game);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
