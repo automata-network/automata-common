@@ -1,14 +1,10 @@
 #![cfg(feature = "runtime-benchmarks")]
 
-use super::*;
-use frame_benchmarking::{Vec, account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_system::RawOrigin;
-use frame_support::{
-    ensure,
-    pallet_prelude::*,
-    traits::Get,
-};
 use super::Pallet as Game;
+use super::*;
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, Vec};
+use frame_support::{ensure, pallet_prelude::*, traits::Get};
+use frame_system::RawOrigin;
 
 benchmarks! {
     attack {
@@ -29,7 +25,6 @@ benchmarks! {
 
 impl_benchmark_test_suite!(
     Game,
-    crate::mock::ExtBuilder::default()
-        .build(),
+    crate::mock::ExtBuilder::default().build(),
     crate::mock::Test,
 );

@@ -78,12 +78,10 @@ impl Config for Test {
     type MaximumAttackerNum = MaximumAttackerNum;
 }
 
-pub struct ExtBuilder {
-}
+pub struct ExtBuilder {}
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self {
-        }
+        Self {}
     }
 }
 impl ExtBuilder {

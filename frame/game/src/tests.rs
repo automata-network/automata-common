@@ -2,15 +2,13 @@ use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
 
 use super::*;
-use crate::mock::{ExtBuilder, Test, Game, System};
+use crate::mock::{ExtBuilder, Game, System, Test};
 
 #[test]
 fn bad_origin() {
     use sp_runtime::DispatchError;
-    
-    ExtBuilder::default()
-    .build()
-    .execute_with(|| {
+
+    ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
             Game::attack(Some(1).into(), vec![]),
             DispatchError::BadOrigin
@@ -20,9 +18,7 @@ fn bad_origin() {
 
 #[test]
 fn test_maximum_attack_count() {
-    ExtBuilder::default()
-    .build()
-    .execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         let maximumAttackCount = <Test as Config>::MaximumAttackCount::get();
         let mut i: u64 = 0;
         while i < maximumAttackCount.into() {
@@ -38,21 +34,15 @@ fn test_maximum_attack_count() {
 
 #[test]
 fn test_event() {
-    ExtBuilder::default()
-    .build()
-    .execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         assert_ok!(Game::attack(RawOrigin::Root.into(), vec![3, 4]));
-        System::assert_last_event(
-            crate::Event::AttackBoss(vec![3, 4]).into()
-        );
+        System::assert_last_event(crate::Event::AttackBoss(vec![3, 4]).into());
     });
 }
 
 #[test]
 fn test_attacker_num() {
-    ExtBuilder::default()
-    .build()
-    .execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         let maximumAttackerNum = <Test as Config>::MaximumAttackerNum::get();
         let mut participates = Vec::<u64>::new();
         let mut i: u64 = 0;

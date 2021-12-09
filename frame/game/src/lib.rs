@@ -12,14 +12,10 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use frame_support::{
-        ensure,
-        pallet_prelude::*,
-        traits::Get,
-    };
-    use frame_system::{pallet_prelude::*};
-    use sp_std::prelude::*;
     pub use crate::weights::WeightInfo;
+    use frame_support::{ensure, pallet_prelude::*, traits::Get};
+    use frame_system::pallet_prelude::*;
+    use sp_std::prelude::*;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -57,14 +53,10 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-
         #[pallet::weight(
             T::WeightInfo::attack(participants.len())
         )]
-        pub fn attack(
-            origin: OriginFor<T>,
-            participants: Vec<T::AccountId>,
-        ) -> DispatchResult {
+        pub fn attack(origin: OriginFor<T>, participants: Vec<T::AccountId>) -> DispatchResult {
             ensure_root(origin.clone())?;
             ensure!(
                 participants.len() <= T::MaximumAttackerNum::get() as usize,
