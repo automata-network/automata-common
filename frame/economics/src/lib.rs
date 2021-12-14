@@ -19,6 +19,7 @@ pub mod pallet {
         traits::{Currency, ExistenceRequirement, Imbalance, LockableCurrency, WithdrawReasons},
     };
     use frame_system::{ensure_signed, pallet_prelude::*};
+    use sp_runtime::traits::Saturating;
     use sp_std::prelude::*;
 
     pub type BalanceOf<T> =
@@ -58,7 +59,7 @@ pub mod pallet {
         pub fn burn(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(
-                T::Currency::free_balance(&who) - T::Currency::minimum_balance() >= amount,
+                T::Currency::free_balance(&who).saturating_sub(T::Currency::minimum_balance()) >= amount,
                 Error::<T>::KillAcount
             );
             // Locked balances are not allowed to burn
@@ -66,7 +67,7 @@ pub mod pallet {
                 &who,
                 amount,
                 WithdrawReasons::TRANSFER,
-                T::Currency::free_balance(&who) - amount,
+                T::Currency::free_balance(&who).saturating_sub(amount),
             )
             .map_err(|_| Error::<T>::InsufficientLiquidity)?;
 
