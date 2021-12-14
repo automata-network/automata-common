@@ -249,7 +249,7 @@ pub mod pallet {
         let mut data = [0u8; 24];
         data[0..4].copy_from_slice(b"evm:");
         data[4..24].copy_from_slice(&evm_address[..]);
-        let mut hasher = VarBlake2b::new(32).unwrap();
+        let mut hasher = VarBlake2b::new(32).unwrap_or_default();
         hasher.update(&data);
         let mut hash_bytes = [0u8; 32];
         hasher.finalize_variable(|res| {
@@ -267,7 +267,7 @@ pub mod pallet {
     }
 
     fn ethereum_signable_message(what: &[u8], extra: &[u8]) -> Vec<u8> {
-        let mut l = what.len() + extra.len();
+        let mut l = what.len().saturating_add(extra.len());
         let mut rev = Vec::new();
         while l > 0 {
             rev.push(b'0' + (l % 10) as u8);
