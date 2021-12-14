@@ -7,6 +7,7 @@ mod mock;
 mod tests;
 
 pub mod hashing;
+use sp_runtime::traits::Saturating;
 
 pub use pallet::*;
 
@@ -75,7 +76,7 @@ pub mod pallet {
             if self.votes_for.len() >= threshold as usize {
                 self.status = ProposalStatus::Approved;
                 ProposalStatus::Approved
-            } else if total >= threshold && self.votes_against.len() as u32 + threshold > total {
+            } else if total >= threshold && (self.votes_against.len() as u32).saturating_add(threshold) > total {
                 self.status = ProposalStatus::Rejected;
                 ProposalStatus::Rejected
             } else {
@@ -436,7 +437,7 @@ pub mod pallet {
 
         /// Increments the deposit nonce for the specified chain ID
         fn bump_nonce(id: BridgeChainId) -> DepositNonce {
-            let nonce = Self::chains(id).unwrap_or_default() + 1;
+            let nonce = Self::chains(id).unwrap_or_default().saturating_add(1);
             ChainNonces::<T>::insert(id, nonce);
             nonce
         }
@@ -484,7 +485,7 @@ pub mod pallet {
                 Error::<T>::RelayerAlreadyExists
             );
             Relayers::<T>::insert(&relayer, true);
-            RelayerCount::<T>::mutate(|i| *i += 1);
+            RelayerCount::<T>::mutate(|i| *i = i.saturating_add(1));
 
             Self::deposit_event(Event::RelayerAdded(relayer));
             Ok(().into())
@@ -494,7 +495,7 @@ pub mod pallet {
         pub fn unregister_relayer(relayer: T::AccountId) -> DispatchResultWithPostInfo {
             ensure!(Self::is_relayer(&relayer), Error::<T>::RelayerInvalid);
             Relayers::<T>::remove(&relayer);
-            RelayerCount::<T>::mutate(|i| *i -= 1);
+            RelayerCount::<T>::mutate(|i| *i = i.saturating_sub(1));
             Self::deposit_event(Event::RelayerRemoved(relayer));
             Ok(().into())
         }
@@ -686,5 +687,11 @@ pub mod pallet {
                 r => Err(T::Origin::from(r)),
             })
         }
+
+        #[cfg(feature = "runtime-benchmarks")]
+		fn successful_origin() -> T::Origin {
+			let bridge_id = MODULE_ID.into_account();
+			T::Origin::from(system::RawOrigin::Signed(bridge_id))
+		}
     }
 }

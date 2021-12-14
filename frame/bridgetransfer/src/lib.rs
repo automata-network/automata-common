@@ -12,7 +12,7 @@ pub mod pallet {
     pub use pallet_bridge as bridge;
     use sp_arithmetic::traits::SaturatedConversion;
     use sp_core::U256;
-    use sp_runtime::DispatchResultWithInfo;
+    use sp_runtime::{DispatchResultWithInfo, traits::Saturating};
     use sp_std::prelude::*;
 
     type ResourceId = bridge::ResourceId;
@@ -113,7 +113,7 @@ pub mod pallet {
                 Error::<T>::FeeOptionsMissing
             );
             let (min_fee, fee_scale) = Self::bridge_fee(dest_id);
-            let fee_estimated = amount * fee_scale.into() / 1000u32.into();
+            let fee_estimated = amount.saturating_mul(fee_scale.into()) / 1000u32.into();
             let fee = if fee_estimated > min_fee {
                 fee_estimated
             } else {
@@ -121,7 +121,7 @@ pub mod pallet {
             };
             let free_balance = T::Currency::free_balance(&source);
             ensure!(
-                free_balance >= (amount + fee),
+                free_balance >= amount.saturating_add(fee),
                 Error::<T>::InsufficientBalance
             );
 

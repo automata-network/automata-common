@@ -64,35 +64,35 @@ pub mod pallet {
             if current_time_millis < self.start_time {
                 self.total_amount
             // Before cliff duration ended, only initial amount tokens are not locked
-            } else if current_time_millis < self.start_time + self.cliff_duration {
+            } else if current_time_millis < self.start_time.saturating_add(self.cliff_duration) {
                 self.total_amount.saturating_sub(self.initial_amount)
             // After total duration ended, all tokens are not locked
-            } else if current_time_millis >= self.start_time + self.total_duration {
+            } else if current_time_millis >= self.start_time.saturating_add(self.total_duration) {
                 Zero::zero()
             } else {
                 let vesting_start_time = if self.vesting_during_cliff {
                     self.start_time
                 } else {
-                    self.start_time + self.cliff_duration
+                    self.start_time.saturating_add(self.cliff_duration)
                 };
 
                 let vesting_duration = if self.vesting_during_cliff {
                     self.total_duration
                 } else {
-                    self.total_duration - self.cliff_duration
+                    self.total_duration.saturating_sub(self.cliff_duration)
                 };
 
                 let total_interval_counts = if vesting_duration % self.interval == 0 {
-                    vesting_duration / self.interval
+                    vesting_duration.saturating_div(self.interval)
                 } else {
-                    vesting_duration / self.interval + 1
+                    vesting_duration.saturating_div(self.interval.saturating_add(1))
                 };
 
                 let unlocked_amount = self
                     .total_amount
                     .saturating_sub(self.initial_amount)
                     .saturating_mul(U64ToBalance::convert(
-                        current_time_millis.saturating_sub(vesting_start_time) / self.interval,
+                        current_time_millis.saturating_sub(vesting_start_time) / self.interval
                     ))
                     / U64ToBalance::convert(total_interval_counts);
                 self.total_amount
