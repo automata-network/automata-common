@@ -83,16 +83,16 @@ pub mod pallet {
                 };
 
                 let total_interval_counts = if vesting_duration % self.interval == 0 {
-                    vesting_duration.saturating_div(self.interval)
+                    vesting_duration / self.interval
                 } else {
-                    vesting_duration.saturating_div(self.interval).saturating_add(1)
+                    (vesting_duration / self.interval).saturating_add(1)
                 };
 
                 let unlocked_amount = self
                     .total_amount
                     .saturating_sub(self.initial_amount)
                     .saturating_mul(U64ToBalance::convert(
-                        current_time_millis.saturating_sub(vesting_start_time) / self.interval
+                        current_time_millis.saturating_sub(vesting_start_time) / self.interval,
                     ))
                     / U64ToBalance::convert(total_interval_counts);
                 self.total_amount
