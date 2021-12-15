@@ -59,7 +59,8 @@ pub mod pallet {
         pub fn burn(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(
-                T::Currency::free_balance(&who).saturating_sub(T::Currency::minimum_balance()) >= amount,
+                T::Currency::free_balance(&who).saturating_sub(T::Currency::minimum_balance())
+                    >= amount,
                 Error::<T>::KillAcount
             );
             // Locked balances are not allowed to burn

@@ -76,7 +76,9 @@ pub mod pallet {
             if self.votes_for.len() >= threshold as usize {
                 self.status = ProposalStatus::Approved;
                 ProposalStatus::Approved
-            } else if total >= threshold && (self.votes_against.len() as u32).saturating_add(threshold) > total {
+            } else if total >= threshold
+                && (self.votes_against.len() as u32).saturating_add(threshold) > total
+            {
                 self.status = ProposalStatus::Rejected;
                 ProposalStatus::Rejected
             } else {

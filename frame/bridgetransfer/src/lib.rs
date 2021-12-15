@@ -17,7 +17,7 @@ pub mod pallet {
     pub use pallet_bridge as bridge;
     use sp_arithmetic::traits::SaturatedConversion;
     use sp_core::U256;
-    use sp_runtime::{DispatchResultWithInfo, traits::Saturating};
+    use sp_runtime::{traits::Saturating, DispatchResultWithInfo};
     use sp_std::prelude::*;
 
     type ResourceId = bridge::ResourceId;
@@ -128,7 +128,7 @@ pub mod pallet {
                     free_balance >= amount.saturating_add(fee),
                     Error::<T>::InsufficientBalance
                 );
-    
+
                 let imbalance = T::Currency::withdraw(
                     &source,
                     fee,
