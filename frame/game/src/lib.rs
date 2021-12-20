@@ -70,7 +70,7 @@ pub mod pallet {
                 Error::<T>::BossDied
             );
 
-            AttackCount::<T>::set(current_attack_count + 1);
+            AttackCount::<T>::set(current_attack_count.saturating_add(1));
             Self::deposit_event(Event::<T>::AttackBoss(participants));
 
             Ok(())

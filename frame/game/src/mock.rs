@@ -76,6 +76,7 @@ impl Config for Test {
     type Event = Event;
     type MaximumAttackCount = MaximumAttackCount;
     type MaximumAttackerNum = MaximumAttackerNum;
+    type WeightInfo = pallet_game::weights::SubstrateWeight<Test>;
 }
 
 pub struct ExtBuilder {}
