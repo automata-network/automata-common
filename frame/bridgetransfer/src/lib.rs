@@ -59,6 +59,7 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// [chainId, min_fee, fee_scale]
         FeeUpdated(bridge::BridgeChainId, BalanceOf<T>, u32),
+        BridgeFungibleTransferOut(T::AccountId, Vec<u8>, U256),
     }
 
     #[pallet::error]
@@ -144,6 +145,13 @@ pub mod pallet {
                 amount,
                 ExistenceRequirement::AllowDeath,
             )?;
+
+            let to: Vec<u8> = Vec::from(recipient.as_slice());
+            Self::deposit_event(Event::BridgeFungibleTransferOut(
+                source,
+                to,
+                U256::from(amount.saturated_into::<u128>()),
+            ));
 
             <bridge::Pallet<T>>::transfer_fungible(
                 dest_id,

@@ -48,6 +48,7 @@ hex-literal = { version = "0.3.1", optional = true }
 pallet-template = { version = "3.0.0", default-features = false, path = "../pallets/template" }
 pallet-vesting = { version = "0.1.0", default-features = false, path = "../../frame/vesting" }
 pallet-economics = { version = "0.1.0", default-features = false, path = "../../frame/economics" }
+pallet-game = { version = "0.1.0", default-features = false, path = "../../frame/game" }
 
 [build-dependencies]
 substrate-wasm-builder = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
@@ -94,5 +95,6 @@ runtime-benchmarks = [
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
 	"pallet-economics/runtime-benchmarks",
+	"pallet-game/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]

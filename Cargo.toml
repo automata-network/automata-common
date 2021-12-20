@@ -8,6 +8,7 @@ members = [
     "frame/transfer",
     "frame/vesting",
     "frame/economics",
+    "frame/game",
     "primitives",
     "node-template/node",
     "node-template/pallets/template",
