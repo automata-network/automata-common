@@ -49,6 +49,7 @@ pallet-template = { version = "3.0.0", default-features = false, path = "../pall
 pallet-vesting = { version = "0.1.0", default-features = false, path = "../../frame/vesting" }
 pallet-economics = { version = "0.1.0", default-features = false, path = "../../frame/economics" }
 pallet-game = { version = "0.1.0", default-features = false, path = "../../frame/game" }
+pallet-daoportal = { version = "0.1.0", default-features = false, path = "../../frame/daoportal" }
 
 [build-dependencies]
 substrate-wasm-builder = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
@@ -72,6 +73,8 @@ std = [
 	"pallet-transaction-payment/std",
 	"pallet-vesting/std",
 	"pallet-economics/std",
+	"pallet-game/std",
+	"pallet-daoportal/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",
@@ -96,5 +99,6 @@ runtime-benchmarks = [
 	"pallet-vesting/runtime-benchmarks",
 	"pallet-economics/runtime-benchmarks",
 	"pallet-game/runtime-benchmarks",
+	"pallet-daoportal/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
