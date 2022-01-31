@@ -15,10 +15,14 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
     use automata_traits::AttestorAccounting;
+    use frame_support::dispatch::DispatchResultWithPostInfo;
+    use frame_support::ensure;
     use frame_support::traits::{Currency, ReservableCurrency};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, pallet_prelude::*, unsigned::ValidateUnsigned,
     };
+    use frame_system::ensure_signed;
+    use frame_system::pallet_prelude::OriginFor;
     use frame_system::{
         offchain::{SendTransactionTypes, SubmitTransaction},
         pallet_prelude::*,
@@ -42,7 +46,7 @@ pub mod pallet {
         /// Attestor's Secp256r1PublicKey
         pub pubkey: Vec<u8>,
         /// Geode being attested by this attestor
-        pub geodes: BTreeSet<AccountId>,
+        pub applications: BTreeSet<AccountId>,
     }
 
     /// The geode struct shows its status
@@ -67,10 +71,22 @@ pub mod pallet {
     pub trait Config: SendTransactionTypes<Call<Self>> + frame_system::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
         /// The currency in which fees are paid and contract balances are held.
         type Currency: ReservableCurrency<Self::AccountId>;
+
         type Call: From<Call<Self>>;
+
         type AttestorAccounting: AttestorAccounting<AccountId = Self::AccountId>;
+
+        // The monimum attestor number for each application instance
+        #[pallet::constant]
+        type MinimumAttestorNum: Get<u16>;
+
+        // The expected attestor number for each application instance
+        #[pallet::constant]
+        type ExpectedAttestorNum: Get<u16>;
+
         type ApplicationHandler: ApplicationTrait;
     }
 
@@ -86,7 +102,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn geode_attestors)]
-    pub type GeodeAttestors<T: Config> =
+    pub type AttestorsOfApplications<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BTreeSet<T::AccountId>, ValueQuery>;
 
     #[pallet::storage]
@@ -123,6 +139,8 @@ pub mod pallet {
         /// Event documentation should end with an array that provides descriptive names for event
         /// parameters. [something, who]
         SomethingStored(u32, T::AccountId),
+        ApplicationAttested(T::AccountId, T::AccountId),
+        AttestorReport(T::AccountId, T::AccountId),
     }
 
     // Errors inform users that something went wrong.
@@ -136,6 +154,8 @@ pub mod pallet {
         InvalidNotification,
         /// Attestor not attesting this geode.
         NotAttestingFor,
+        /// Attestor has already attest the application before
+        DuplicateAttestation,
     }
 
     #[pallet::validate_unsigned]
@@ -207,7 +227,7 @@ pub mod pallet {
             let attestor = AttestorOf::<T> {
                 url,
                 pubkey,
-                geodes: BTreeSet::new(),
+                applications: BTreeSet::new(),
             };
             <Attestors<T>>::insert(&who, attestor);
 
@@ -221,23 +241,9 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Called by attestor to update its url.
+        /// Attestor heartbeat
         #[pallet::weight(0)]
-        pub fn attestor_update(origin: OriginFor<T>, url: Vec<u8>) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            ensure!(
-                <Attestors<T>>::contains_key(&who),
-                Error::<T>::InvalidAttestor
-            );
-            let mut attestor = <Attestors<T>>::get(&who);
-            attestor.url = url;
-            <Attestors<T>>::insert(&who, attestor);
-            Self::deposit_event(Event::AttestorUpdate(who));
-            Ok(().into())
-        }
-
-        #[pallet::weight(0)]
-        pub fn attestor_notify_chain(
+        pub fn attestor_heartbeat(
             _origin: OriginFor<T>,
             message: Vec<u8>,
             signature_raw_bytes: [u8; 64],
@@ -270,125 +276,116 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Report that somebody did a misconduct. The actual usage is being considered.
+        /// Update attestor's url
         #[pallet::weight(0)]
-        pub fn attestor_report(
-            origin: OriginFor<T>,
-            geode_id: T::AccountId,
-            report_type: u8,
-            _proof: Vec<u8>,
-        ) -> DispatchResultWithPostInfo {
+        pub fn attestor_update(origin: OriginFor<T>, url: Vec<u8>) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            // check attestor existance and whether attested
             ensure!(
                 <Attestors<T>>::contains_key(&who),
                 Error::<T>::InvalidAttestor
             );
+            let mut attestor = <Attestors<T>>::get(&who);
+            attestor.url = url;
+            <Attestors<T>>::insert(&who, attestor);
+            Self::deposit_event(Event::AttestorUpdate(who));
+            Ok(().into())
+        }
+
+        /// Remove attestor
+        #[pallet::weight(0)]
+        pub fn attestor_remove(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(Attestors::<T>::contains_key(&who), Error::<T>::InvalidAttestor);
+            
+            T::AttestorAccounting::attestor_unreserve(who.clone());
+            
+            let attestor_record = Attestors::<T>::get(&who);
+            for application_id in attestors.applications.inter() {
+                let mut attestors = AttestorsOfApplications::<T>::get(&application_id);
+                attestors.remove(&who);
+
+                if (attestors.is_empty()) {
+                    AttestorsOfApplications::<T>::remove(&application_id);
+                } else {
+                    AttestorsOfApplications::<T>::insert(&application_id, &attestors);
+                }
+
+                if MinimumAttestorNum::<T>::get() > attestors.len() as u16 {
+                    T::ApplicationHandler::application_unhealthy(&application_id);
+                }
+            }
+
+            AttestorNum::<T>::put(AttestorNum::<T>::get().saturated_sub(1));
+            AttestorLastNotify::<T>::remove(&who);
+            Attestors::<T>::remove(&who);
+
+            Self::deposit_event(Event::AttestorRemove(who));
+
+            Ok(().into())
+        }
+
+        // Attestor report that an application is attested by it
+        #[pallet::weight(0)]
+        pub fn attestor_attest_application(
+            origin: OriginFor<T>,
+            application_id: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(Attestors::<T>::contains_key(&who), Error::<T>::InvalidAttestor);
+
+            let mut attestor_record = Attestors::<T>::get(&who);
             ensure!(
-                <Attestors<T>>::get(&who)
-                    .geodes
-                    .contains(&geode_id),
-                Error::<T>::NotAttestingFor
+                !attestor_record.applications.contains(&application_id),
+                Error::<T>::DuplicateAttestation
             );
-            // check have report
-            match ReportType::try_from(report_type) {
-                Ok(t) => {
-                    match t {
-                        ReportType::Challenge => {
-                            let geode = pallet_geode::Geodes::<T>::get(&geode_id);
-                            if geode.state == pallet_geode::GeodeState::Registered {
-                                // just exit attesting for it
-                                let mut attestors =
-                                    <GeodeAttestors<T>>::get(&geode_id);
-                                attestors.remove(&who);
+            attestor_record.applications.insert(application_id.clone());
+            Attestors::<T>::insert(&who, attestor_record);
 
-                                if attestors.is_empty() {
-                                    <GeodeAttestors<T>>::remove(&geode_id);
-                                } else {
-                                    <GeodeAttestors<T>>::insert(
-                                        &geode_id, &attestors,
-                                    );
-                                }
+            let mut attestorsOfApplication = BTreeSet::<T::AccountId>::new();
+            if AttestorsOfApplications::<T>::contains_key(&application_id) {
+                attestorsOfApplication = AttestorsOfApplications::<T>::get(&application_id);
+            }
+            attestorsOfApplication.insert(who.clone());
+            AttestorsOfApplications::<T>::insert(&application_id, attestorsOfApplication);
 
-                                Self::deposit_event(Event::ReportBlame(who, geode_id));
-                                return Ok(().into());
-                            }
-                            ensure!(
-                                geode.state == pallet_geode::GeodeState::Attested
-                                    || geode.state == pallet_geode::GeodeState::Instantiated
-                                    || geode.state == pallet_geode::GeodeState::Degraded,
-                                pallet_geode::Error::<T>::InvalidGeodeState
-                            );
-                        }
-                        ReportType::Service => {
-                            let geode = pallet_geode::Geodes::<T>::get(&geode_id);
-                            ensure!(
-                                geode.state == pallet_geode::GeodeState::Instantiated
-                                    || geode.state == pallet_geode::GeodeState::Degraded,
-                                pallet_geode::Error::<T>::InvalidGeodeState
-                            );
-                            let service_use =
-                                pallet_service::Services::<T>::get(geode.order.unwrap().0);
-                            ensure!(
-                                service_use.geodes.contains(&geode_id),
-                                pallet_service::Error::<T>::InvalidServiceState
-                            );
-                        }
-                        _ => {
-                            return Err(Error::<T>::InvalidReportType.into());
-                        }
-                    }
-                }
-                Err(_) => {
-                    return Err(Error::<T>::InvalidReportType.into());
-                }
-            };
+            if attestorsOfApplication.len() as u16 == MinimumAttestorNum::<T>::get() {
+                T::ApplicationHandler::application_healthy(&application_id);
+            }
 
-            let mut attestors = <GeodeAttestors<T>>::get(&geode_id);
+            Self::deposit_event(Event::ApplicationAttested(application_id, who));
+
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn attestor_report(
+            origin: OriginFor<T>,
+            application_id: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            
+            ensure!(Attestors::<T>::contains_key(&who), Errors::<T>::InvalidAttestor);
+            ensure!(Attestors::<T>::get(&who).applications.contains(&application_id), Errors::<T>::NotAttestingFor);
+
+            let mut attestors = AttestorsOfApplications::<T>::get(&application_id);
             attestors.remove(&who);
 
-            if attestors.is_empty() {
-                <GeodeAttestors<T>>::remove(&geode_id);
-            } else {
-                <GeodeAttestors<T>>::insert(&geode_id, &attestors);
+            if (attestors.len() < MinimumAttestorNum::<T>::get()) {
+                T::ApplicationHandler::application_unhealthy(&application_id);
             }
 
-            let mut attestorOf = <Attestors<T>>::get(&who);
-            attestorOf.geodes.remove(&geode_id);
-            <Attestors<T>>::insert(&who, attestorOf);
-
-            // ApplicationHandler::unhealthy_application(&geode_id, ReportType::try_from(report_type));
-            // 如果每次report都移除attestor，那会导致不同原因的report最终混合导致geode状态改变
-
-
-            let key = (geode_id.clone(), report_type);
-            let mut report = ReportOf::<T>::default();
-            if <Reports<T>>::contains_key(&key) {
-                report = <Reports<T>>::get(&key);
-                report.attestors.insert(who.clone());
+            if (attestors.is_empty()) {
+                AttestorsOfApplications::<T>::remove(&application_id);
             } else {
-                report.attestors.insert(who.clone());
-                let block_number =
-                    <frame_system::Module<T>>::block_number().saturated_into::<BlockNumber>();
-                report.start = block_number;
+                AttestorsOfApplications::<T>::insert(&application_id, attestors);
             }
 
-            // check current amount of misconduct satisfying the approval ratio
-            if Percent::from_rational_approximation(
-                report.attestors.len(),
-                <GeodeAttestors<T>>::get(&geode_id).len(),
-            ) >= T::ReportApprovalRatio::get()
-            {
-                // slash the geode
-                Self::slash_geode(&key.0);
-                <Reports<T>>::remove(&key);
-                Self::deposit_event(Event::SlashGeode(key.0.clone()));
-            } else {
-                // update report storage
-                <Reports<T>>::insert(&key, report);
-            }
+            let mut attestor = Attestors::<T>::get(&who);
+            attestor.applications.remove(&application_id);
+            Attestors::<T>::insert(&who, attestor);
 
-            Self::deposit_event(Event::ReportBlame(who, key.0));
+            Self::deposit_event(Event::AttestorReport(who, application_id));
+
             Ok(().into())
         }
     }
