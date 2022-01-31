@@ -27,6 +27,9 @@ pub mod pallet {
         #[pallet::constant]
         type MaximumAttackerNum: Get<u32>;
 
+        #[pallet::constant]
+        type MinimumAttackerNum: Get<u32>;
+
         type WeightInfo: WeightInfo;
     }
 
@@ -48,7 +51,8 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         BossDied,
-        AttackNumExceed,
+        AttackerNumExceed,
+        AttackerNumNotEnough,
     }
 
     #[pallet::call]
@@ -59,8 +63,12 @@ pub mod pallet {
         pub fn attack(origin: OriginFor<T>, participants: Vec<T::AccountId>) -> DispatchResult {
             ensure_root(origin.clone())?;
             ensure!(
+                participants.len() >= T::MinimumAttackerNum::get() as usize,
+                Error::<T>::AttackerNumNotEnough
+            );
+            ensure!(
                 participants.len() <= T::MaximumAttackerNum::get() as usize,
-                Error::<T>::AttackNumExceed
+                Error::<T>::AttackerNumExceed
             );
             //Do we need a switch which will control the start of the game?
 

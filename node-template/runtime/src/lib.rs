@@ -298,6 +298,7 @@ impl pallet_economics::Config for Runtime {
 
 parameter_types! {
     pub const MaximumAttackCount: u32 = 2;
+    pub const MinimumAttackerNum: u32 = 1;
     pub const MaximumAttackerNum: u32 = 5;
 }
 
@@ -305,6 +306,7 @@ impl pallet_game::Config for Runtime {
     type Event = Event;
     type MaximumAttackCount = MaximumAttackCount;
     type MaximumAttackerNum = MaximumAttackerNum;
+    type MinimumAttackerNum = MinimumAttackerNum;
     type WeightInfo = pallet_game::weights::SubstrateWeight<Runtime>;
 }
 
