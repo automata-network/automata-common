@@ -6,6 +6,7 @@ members = [
     "frame/geode",
     "frame/liveness",
     "frame/transfer",
+    "frame/witness",
     "frame/vesting",
     "frame/economics",
     "frame/game",
@@ -19,3 +20,4 @@ members = [
 [profile.release]
 # Automata runtime requires unwinding.
 panic = "unwind"
+
