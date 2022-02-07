@@ -27,6 +27,7 @@ sp-core = { git = 'https://github.com/automata-network/substrate.git', branch = 
 # frame dependencies
 frame-support = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false }
 frame-system = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false }
+frame-benchmarking = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false, optional = true }
 
 pallet-balances = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false }
 
@@ -45,3 +46,4 @@ std = [
 	"frame-system/std",
 	"pallet-balances/std",
 ]
+runtime-benchmarks = ["frame-benchmarking"]

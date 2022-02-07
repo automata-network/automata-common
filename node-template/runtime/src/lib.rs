@@ -310,6 +310,26 @@ impl pallet_game::Config for Runtime {
     type WeightInfo = pallet_game::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+    pub const MinDuration: u64 = 3600000;
+    pub const MaxDuration: u64 = 86400000;
+    pub const MaxOptionCount: u8 = 10;
+    pub const MaxWorkspace: u32 = 100;
+    pub const MaxStrategy: u32 = 100;
+}
+
+impl pallet_daoportal::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type MinDuration = MinDuration;
+    type MaxDuration = MaxDuration;
+    type MaxOptionCount = MaxOptionCount;
+    type MaxWorkspace = MaxWorkspace;
+    type MaxStrategy = MaxStrategy;
+    type UnixTime = Timestamp;
+    type DAOPortalWeightInfo = pallet_daoportal::weights::SubstrateWeight<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -330,6 +350,7 @@ construct_runtime!(
         Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>},
         Economics: pallet_economics::{Pallet, Call, Event<T>},
         Game: pallet_game::{Pallet, Call, Storage, Event<T>},
+        DAOPortal: pallet_daoportal::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -510,6 +531,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_vesting, Vesting);
             list_benchmark!(list, extra, pallet_economics, Economics);
             list_benchmark!(list, extra, pallet_game, Game);
+            list_benchmark!(list, extra, pallet_daoportal, DAOPortal);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -547,6 +569,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_vesting, Vesting);
             add_benchmark!(params, batches, pallet_economics, Economics);
             add_benchmark!(params, batches, pallet_game, Game);
+            add_benchmark!(params, batches, pallet_daoportal, DAOPortal);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

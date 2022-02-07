@@ -3,6 +3,7 @@ members = [
     "frame/attestor",
     "frame/bridge",
     "frame/bridgetransfer",
+    "frame/daoportal",
     "frame/geode",
     "frame/liveness",
     "frame/transfer",
