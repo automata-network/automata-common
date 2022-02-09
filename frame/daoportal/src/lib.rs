@@ -10,7 +10,7 @@ mod mock;
 mod tests;
 pub mod weights;
 
-mod datastructures;
+pub mod datastructures;
 
 #[frame_support::pallet]
 pub mod pallet {
