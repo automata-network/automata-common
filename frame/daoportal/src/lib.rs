@@ -370,6 +370,18 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        pub fn get_projects() -> Vec<(ProjectId, Project<T::AccountId>)> {
+            <Projects<T>>::iter().collect()
+        }
+
+        pub fn get_proposals(project: ProjectId) -> Vec<(ProposalId, Proposal<T::AccountId>)> {
+            <Proposals<T>>::iter_prefix(project).collect()
+        }
+
+        pub fn get_all_proposals() -> Vec<(ProjectId, ProposalId, Proposal<T::AccountId>)> {
+            <Proposals<T>>::iter().collect()
+        }
+
         fn check_workspace(project: &Project<T::AccountId>) -> DispatchResult {
             let mut chain_index = 0;
 
