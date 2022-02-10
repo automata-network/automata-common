@@ -233,7 +233,7 @@ pub mod pallet {
         pub fn add_proposal(
             origin: OriginFor<T>,
             project_id: ProjectId,
-            mut proposal: Proposal<T::AccountId>,
+            proposal: Proposal<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             ensure!(proposal._option_count > 1, Error::<T>::InvalidProposal);
             ensure!(
@@ -287,6 +287,9 @@ pub mod pallet {
             if proposal._start <= T::UnixTime::now().as_millis().saturated_into::<u64>() {
                 status = ProposalStatus::Ongoing;
             }
+
+            let mut proposal = proposal.clone();
+
             proposal.state = ProposalState {
                 status: status,
                 votes: vec![0.into(); proposal._option_count.into()],
