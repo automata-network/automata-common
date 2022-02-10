@@ -79,7 +79,7 @@ pub struct Workspace {
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct Proposal<AccountId> {
+pub struct DAOProposal<AccountId> {
     pub _author: CrossChainAccount<AccountId>,
     pub _voting_format: VotingFormat,
     pub _option_count: OptionIndex,
@@ -88,7 +88,7 @@ pub struct Proposal<AccountId> {
     pub _start: u64,
     pub _end: u64,
     pub _frequency: Option<u64>,
-    pub state: ProposalState,
+    pub state: DAOProposalState,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -102,7 +102,7 @@ pub enum PrivacyLevel {
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub enum ProposalStatus {
+pub enum DAOProposalStatus {
     Pending,
     Ongoing,
     Closed,
@@ -110,17 +110,17 @@ pub enum ProposalStatus {
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct ProposalState {
-    pub status: ProposalStatus,
+pub struct DAOProposalState {
+    pub status: DAOProposalStatus,
     pub votes: Vec<VotingPower>,
     pub pub_voters: Option<IpfsHash>,
     pub updates: u32,
 }
 
-impl Default for ProposalState {
+impl Default for DAOProposalState {
     fn default() -> Self {
-        ProposalState {
-            status: ProposalStatus::Pending,
+        DAOProposalState {
+            status: DAOProposalStatus::Pending,
             votes: Vec::new(),
             pub_voters: None,
             updates: 0,

@@ -86,7 +86,7 @@ pub mod pallet {
         ProjectId,
         Blake2_128Concat,
         ProposalId,
-        Proposal<T::AccountId>,
+        DAOProposal<T::AccountId>,
     >;
 
     #[pallet::event]
@@ -233,7 +233,7 @@ pub mod pallet {
         pub fn add_proposal(
             origin: OriginFor<T>,
             project_id: ProjectId,
-            proposal: Proposal<T::AccountId>,
+            proposal: DAOProposal<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             ensure!(proposal._option_count > 1, Error::<T>::InvalidProposal);
             ensure!(
@@ -283,14 +283,14 @@ pub mod pallet {
                 )?;
             }
 
-            let mut status = ProposalStatus::Pending;
+            let mut status = DAOProposalStatus::Pending;
             if proposal._start <= T::UnixTime::now().as_millis().saturated_into::<u64>() {
-                status = ProposalStatus::Ongoing;
+                status = DAOProposalStatus::Ongoing;
             }
 
             let mut proposal = proposal.clone();
 
-            proposal.state = ProposalState {
+            proposal.state = DAOProposalState {
                 status: status,
                 votes: vec![0.into(); proposal._option_count.into()],
                 pub_voters: None,
@@ -329,7 +329,7 @@ pub mod pallet {
                             update.votes.len() == proposal.state.votes.len(),
                             Error::<T>::InvalidVote
                         );
-                        if &proposal.state.status == &ProposalStatus::Closed {
+                        if &proposal.state.status == &DAOProposalStatus::Closed {
                             return Err(Error::<T>::InvalidStatus.into());
                         } else {
                             let current = &T::UnixTime::now().as_millis().saturated_into::<u64>();
@@ -339,9 +339,9 @@ pub mod pallet {
                                         proposal._privacy != PrivacyLevel::Opaque,
                                         Error::<T>::ConflictWithPrivacyLevel
                                     );
-                                    proposal.state.status = ProposalStatus::Ongoing;
+                                    proposal.state.status = DAOProposalStatus::Ongoing;
                                 } else {
-                                    proposal.state.status = ProposalStatus::Closed;
+                                    proposal.state.status = DAOProposalStatus::Closed;
                                 }
                             } else {
                                 return Err(Error::<T>::InvalidStatus.into());
@@ -377,11 +377,11 @@ pub mod pallet {
             <Projects<T>>::iter().collect()
         }
 
-        pub fn get_proposals(project: ProjectId) -> Vec<(ProposalId, Proposal<T::AccountId>)> {
+        pub fn get_proposals(project: ProjectId) -> Vec<(ProposalId, DAOProposal<T::AccountId>)> {
             <Proposals<T>>::iter_prefix(project).collect()
         }
 
-        pub fn get_all_proposals() -> Vec<(ProjectId, ProposalId, Proposal<T::AccountId>)> {
+        pub fn get_all_proposals() -> Vec<(ProjectId, ProposalId, DAOProposal<T::AccountId>)> {
             <Proposals<T>>::iter().collect()
         }
 
