@@ -374,6 +374,17 @@ pub mod pallet {
         }
 
         // TODO: admin calls
+        #[pallet::weight(0)]
+        pub fn clean_data(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+
+            Projects::<T>::remove_all(None);
+            Proposals::<T>::remove_all(None);
+            LatestProposalId::<T>::remove_all(None);
+            LatestProjectId::<T>::set(0);
+
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
