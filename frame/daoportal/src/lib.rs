@@ -253,6 +253,8 @@ pub mod pallet {
                 Error::<T>::InvalidDuration
             );
 
+            // TODO: Reject Opaque proposal with frequency (or ignore it) 
+
             let who = ensure_signed(origin)?;
 
             let relayer = Self::relayer();
@@ -309,7 +311,7 @@ pub mod pallet {
 			T::DAOPortalWeightInfo::update_vote(update.votes.len().saturated_into())
 		)]
         pub fn update_vote(origin: OriginFor<T>, update: VoteUpdate) -> DispatchResultWithPostInfo {
-            // TODO ensure the timing for geode update is valid
+            // TODO: ensure the timing for geode update is valid
             let who = ensure_signed(origin)?;
             ensure!(who == Self::relayer(), Error::<T>::NotRelayer);
             ensure!(
@@ -370,6 +372,8 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+        // TODO: admin calls
     }
 
     impl<T: Config> Pallet<T> {

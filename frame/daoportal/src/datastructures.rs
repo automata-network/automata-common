@@ -7,7 +7,7 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use sp_core::{U256, H256, H160};
+use sp_core::{U256, H160};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
@@ -16,7 +16,7 @@ pub type ProjectId = u32;
 pub type ProposalId = u32;
 pub type OptionIndex = u8;
 pub type VotingPower = U256;
-pub type IpfsHash = H256;
+pub type IpfsHash = Vec<u8>;
 pub type EthAddress = H160;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
