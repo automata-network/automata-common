@@ -425,7 +425,7 @@ pub mod pallet {
         /// Return list of attestors of a geode
         pub fn attestors_of_geode(geode: T::AccountId) -> Vec<(Vec<u8>, Vec<u8>)> {
             let mut res = Vec::new();
-            let ids = <GeodeAttestors<T>>::get(&geode);
+            let ids = <AttestorsOfApplications<T>>::get(&geode);
             ids.iter()
                 .map(|id| {
                     let att = <Attestors<T>>::get(&id);
@@ -433,40 +433,6 @@ pub mod pallet {
                 })
                 .all(|_| true);
             res
-        }
-
-        /// remove attestor, return degraded geodes
-        pub fn attestor_remove(attestor: T::AccountId) -> Vec<T::AccountId> {
-            let attestor_record = <Attestors<T>>::get(&attestor);
-
-            let mut ret = Vec::new();
-
-            for geode in attestor_record.geodes.into_iter() {
-                ret.push(geode)
-            }
-
-            // change storage
-            <AttestorNum<T>>::put(<AttestorNum<T>>::get() - 1);
-            <AttestorLastNotify<T>>::remove(&attestor);
-            <Attestors<T>>::remove(&attestor);
-
-            // deposit event
-            Self::deposit_event(Event::AttestorRemove(attestor));
-
-            ret
-        }
-
-        /// detach geode from attestors
-        pub fn detach_geode_from_attestors(geode: &T::AccountId) {
-            // clean record on attestors
-            if GeodeAttestors::<T>::contains_key(&geode) {
-                for id in GeodeAttestors::<T>::get(&geode) {
-                    let mut attestor = Attestors::<T>::get(&id);
-                    attestor.geodes.remove(&geode);
-                    Attestors::<T>::insert(&id, attestor);
-                }
-                GeodeAttestors::<T>::remove(&geode);
-            }
         }
 
         /// clean all the storage, USE WITH CARE!
@@ -486,14 +452,14 @@ pub mod pallet {
 
             // clean GeodeAttestors
             {
-                let mut geode_attestors = Vec::new();
-                <GeodeAttestors<T>>::iter()
+                let mut attestorsOfApplications = Vec::new();
+                <AttestorsOfApplications<T>>::iter()
                     .map(|(key, _)| {
-                        geode_attestors.push(key);
+                        attestorsOfApplications.push(key);
                     })
                     .all(|_| true);
                 for geode_attestor in geode_attestors.iter() {
-                    <GeodeAttestors<T>>::remove(geode_attestor);
+                    <AttestorsOfApplications<T>>::remove(geode_attestor);
                 }
             }
 
