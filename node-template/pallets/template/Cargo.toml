@@ -15,15 +15,15 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-frame-support = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-frame-system = { default-features = false,  git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-frame-benchmarking = { default-features = false,  git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', optional = true }
+frame-support = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
+frame-system = { default-features = false,  git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
+frame-benchmarking = { default-features = false,  git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock', optional = true }
 
 [dev-dependencies]
 serde = { version = "1.0.126" }
-sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-io = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-runtime = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
+sp-io = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
+sp-runtime = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
 
 [features]
 default = ['std']

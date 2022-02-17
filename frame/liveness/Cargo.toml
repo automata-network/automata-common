@@ -13,12 +13,12 @@ targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
 codec = { default-features = false, features = ['derive'], package = 'parity-scale-codec', version = '2.0.0' }
-frame-system = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-frame-support = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-std = {git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false }
+frame-system = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
+frame-support = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
+sp-std = {git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock', default-features = false }
 serde_json = { version = "1", optional = true }
 serde = { version = "1.0.119", optional = true, features = ["derive"] }
-sp-runtime = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sp-runtime = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
 
 # local dependencies
 primitives = { package = "automata-primitives", path = "../../primitives", default-features = false }
@@ -28,9 +28,9 @@ pallet-service = { version = "0.1.0", default-features = false, path = '../servi
 automata-traits = { package = "automata-traits", path = "../../traits", default-features = false }
 
 [dev-dependencies]
-sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-io = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-balances = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
+sp-io = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
+pallet-balances = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10-unlock' }
 pallet-accounting = { path = "../accounting"}
 
 [features]
