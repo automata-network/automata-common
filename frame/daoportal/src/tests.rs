@@ -102,7 +102,7 @@ fn direct_project_manipulation() {
                     workspaces: vec![valid_workspace.clone(), valid_workspace.clone()]
                 }
             ),
-            Error::<Test>::InvalidWorkspace
+            Error::<Test>::DuplicateWorkspace
         );
         assert_eq!(DAOPortal::latest_project_id(), 1);
 

@@ -71,11 +71,14 @@ impl pallet_balances::Config for Test {
 parameter_types! {
     pub const MaximumAttackCount: u32 = 2;
     pub const MaximumAttackerNum: u32 = 5;
+    pub const MinimumAttackerNum: u32 = 1;
 }
+
 impl Config for Test {
     type Event = Event;
     type MaximumAttackCount = MaximumAttackCount;
     type MaximumAttackerNum = MaximumAttackerNum;
+    type MinimumAttackerNum = MinimumAttackerNum;
     type WeightInfo = pallet_game::weights::SubstrateWeight<Test>;
 }
 

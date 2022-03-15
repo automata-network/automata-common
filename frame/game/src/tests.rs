@@ -52,7 +52,7 @@ fn test_attacker_num() {
         }
         assert_noop!(
             Game::attack(RawOrigin::Root.into(), participates),
-            Error::<Test>::AttackNumExceed
+            Error::<Test>::AttackerNumExceed
         );
     });
 }
