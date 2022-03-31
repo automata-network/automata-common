@@ -44,7 +44,11 @@ fn direct_project_manipulation() {
         assert_ok!(DAOPortal::add_project(
             Some(2).into(),
             Project {
-                owner: CrossChainAccount::Substrate(2),
+                usergroup: UserGroup {
+                    owner: CrossChainAccount::Substrate(2),
+                    admins: Vec::new(),
+                    proposers: None,
+                },
                 data: IpfsHash::default(),
                 workspaces: vec![valid_workspace.clone()]
             }
@@ -54,7 +58,11 @@ fn direct_project_manipulation() {
             DAOPortal::add_project(
                 Some(2).into(),
                 Project {
-                    owner: CrossChainAccount::Substrate(2),
+                    usergroup: UserGroup {
+                        owner: CrossChainAccount::Substrate(2),
+                        admins: Vec::new(),
+                        proposers: None,
+                    },
                     data: IpfsHash::default(),
                     workspaces: Vec::new()
                 }
@@ -66,7 +74,11 @@ fn direct_project_manipulation() {
             DAOPortal::add_project(
                 Some(2).into(),
                 Project {
-                    owner: CrossChainAccount::Substrate(2),
+                    usergroup: UserGroup {
+                        owner: CrossChainAccount::Substrate(2),
+                        admins: Vec::new(),
+                        proposers: None,
+                    },
                     data: IpfsHash::default(),
                     workspaces: vec![Workspace {
                         _chain: 1,
@@ -81,7 +93,11 @@ fn direct_project_manipulation() {
             DAOPortal::add_project(
                 Some(2).into(),
                 Project {
-                    owner: CrossChainAccount::Substrate(2),
+                    usergroup: UserGroup {
+                        owner: CrossChainAccount::Substrate(2),
+                        admins: Vec::new(),
+                        proposers: None,
+                    },
                     data: IpfsHash::default(),
                     workspaces: vec![Workspace {
                         _chain: 2,
@@ -97,7 +113,11 @@ fn direct_project_manipulation() {
             DAOPortal::add_project(
                 Some(2).into(),
                 Project {
-                    owner: CrossChainAccount::Substrate(2),
+                    usergroup: UserGroup {
+                        owner: CrossChainAccount::Substrate(2),
+                        admins: Vec::new(),
+                        proposers: None,
+                    },
                     data: IpfsHash::default(),
                     workspaces: vec![valid_workspace.clone(), valid_workspace.clone()]
                 }
@@ -112,7 +132,11 @@ fn direct_project_manipulation() {
             Some(2).into(),
             1,
             Project {
-                owner: CrossChainAccount::Substrate(3),
+                usergroup: UserGroup {
+                    owner: CrossChainAccount::Substrate(3),
+                    admins: Vec::new(),
+                    proposers: None,
+                },
                 data: IpfsHash::default(),
                 workspaces: vec![valid_workspace.clone()]
             }
@@ -123,7 +147,11 @@ fn direct_project_manipulation() {
                 Some(2).into(),
                 1,
                 Project {
-                    owner: CrossChainAccount::Substrate(4),
+                    usergroup: UserGroup {
+                        owner: CrossChainAccount::Substrate(4),
+                        admins: Vec::new(),
+                        proposers: None,
+                    },
                     data: IpfsHash::default(),
                     workspaces: vec![valid_workspace.clone()]
                 }
@@ -135,7 +163,11 @@ fn direct_project_manipulation() {
             Some(3).into(),
             1,
             Project {
-                owner: CrossChainAccount::Substrate(4),
+                usergroup: UserGroup {
+                    owner: CrossChainAccount::Substrate(4),
+                    admins: Vec::new(),
+                    proposers: None,
+                },
                 data: IpfsHash::default(),
                 workspaces: vec![valid_workspace]
             }
@@ -156,7 +188,11 @@ fn relay_project_manipulation() {
         assert_ok!(DAOPortal::add_project(
             Some(1).into(),
             Project {
-                owner: CrossChainAccount::Solidity(EthAddress::zero()),
+                usergroup: UserGroup {
+                    owner: CrossChainAccount::Solidity(EthAddress::zero()),
+                    admins: Vec::new(),
+                    proposers: None,
+                },
                 data: IpfsHash::default(),
                 workspaces: vec![valid_workspace.clone()]
             }
@@ -170,7 +206,11 @@ fn relay_project_manipulation() {
                 Some(2).into(),
                 1,
                 Project {
-                    owner: CrossChainAccount::Substrate(2),
+                    usergroup: UserGroup {
+                        owner: CrossChainAccount::Substrate(2),
+                        admins: Vec::new(),
+                        proposers: None,
+                    },
                     data: IpfsHash::default(),
                     workspaces: vec![valid_workspace.clone()]
                 }
@@ -182,7 +222,11 @@ fn relay_project_manipulation() {
             Some(1).into(),
             1,
             Project {
-                owner: CrossChainAccount::Substrate(2),
+                usergroup: UserGroup {
+                    owner: CrossChainAccount::Substrate(2),
+                    admins: Vec::new(),
+                    proposers: None,
+                },
                 data: IpfsHash::default(),
                 workspaces: vec![valid_workspace.clone()]
             }
@@ -192,7 +236,11 @@ fn relay_project_manipulation() {
             Some(2).into(),
             1,
             Project {
-                owner: CrossChainAccount::Substrate(3),
+                usergroup: UserGroup {
+                    owner: CrossChainAccount::Substrate(3),
+                    admins: Vec::new(),
+                    proposers: None,
+                },
                 data: IpfsHash::default(),
                 workspaces: vec![valid_workspace.clone()]
             }
@@ -221,7 +269,6 @@ fn direct_add_proposal() {
         ));
         assert_eq!(DAOPortal::latest_proposal_id(1), 1);
         let proposal_1 = DAOPortal::proposals(1, 1).unwrap();
-        assert_eq!(proposal_1.state.status, DAOProposalStatus::Pending);
         assert_eq!(
             Balances::free_balance(&2),
             INIT_BALANCE - DAOPortal::vote_fee()
@@ -250,7 +297,6 @@ fn direct_add_proposal() {
 
         assert_eq!(DAOPortal::latest_proposal_id(1), 2);
         let proposal_2 = DAOPortal::proposals(1, 2).unwrap();
-        assert_eq!(proposal_2.state.status, DAOProposalStatus::Ongoing);
 
         // Add an invalid proposal with invalid number of options
         assert_noop!(
@@ -447,10 +493,6 @@ fn update_vote() {
         );
 
         Timestamp::set_timestamp(2000);
-        assert_eq!(
-            DAOPortal::proposals(1, 1).unwrap().state.status,
-            DAOProposalStatus::Pending
-        );
 
         // Proposal (1, 1) voted failed with incorrect votes size
         assert_noop!(
@@ -475,11 +517,6 @@ fn update_vote() {
                 pub_voters: None
             }
         ));
-        // Proposal (1, 1) status updated
-        assert_eq!(
-            DAOPortal::proposals(1, 1).unwrap().state.status,
-            DAOProposalStatus::Ongoing
-        );
 
         // Proposal (1, 2) voted failed with pub_voters not None
         assert_noop!(
@@ -490,20 +527,6 @@ fn update_vote() {
                     proposal: 2,
                     votes: vec![0.into(); 2],
                     pub_voters: Some(IpfsHash::default()),
-                }
-            ),
-            Error::<Test>::ConflictWithPrivacyLevel
-        );
-
-        // Proposal (1, 3) voted failed as Opaque only open for vote when duration ended
-        assert_noop!(
-            DAOPortal::update_vote(
-                Some(1).into(),
-                VoteUpdate {
-                    project: 1,
-                    proposal: 3,
-                    votes: vec![0.into(); 2],
-                    pub_voters: None,
                 }
             ),
             Error::<Test>::ConflictWithPrivacyLevel
@@ -522,8 +545,8 @@ fn update_vote() {
             }
         ));
         assert_eq!(
-            DAOPortal::proposals(1, 3).unwrap().state.status,
-            DAOProposalStatus::Closed
+            DAOPortal::proposals(1, 3).unwrap().state.finalized,
+            true
         );
     });
 }

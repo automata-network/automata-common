@@ -207,7 +207,7 @@ pub mod pallet {
                 if let Some(ref mut p) = p {
                     if who != Self::relayer() {
                         ensure!(
-                            CrossChainAccount::<T::AccountId>::Substrate(who) == p.owner,
+                            CrossChainAccount::<T::AccountId>::Substrate(who) == p.usergroup.owner,
                             Error::<T>::InvalidSenderOrigin
                         );
                     }
@@ -285,15 +285,10 @@ pub mod pallet {
                 )?;
             }
 
-            let mut status = DAOProposalStatus::Pending;
-            if proposal._start <= T::UnixTime::now().as_millis().saturated_into::<u64>() {
-                status = DAOProposalStatus::Ongoing;
-            }
-
-            let mut proposal = proposal.clone();
-
-            proposal.state = DAOProposalState {
-                status: status,
+            proposal.state = ProposalState {
+                finalized: false,
+                snapshots: Vec::new(),
+                blacklisted: false,
                 votes: vec![0.into(); proposal._option_count.into()],
                 pub_voters: None,
                 updates: 0,
@@ -331,19 +326,15 @@ pub mod pallet {
                             update.votes.len() == proposal.state.votes.len(),
                             Error::<T>::InvalidVote
                         );
-                        if &proposal.state.status == &DAOProposalStatus::Closed {
+                        if proposal.state.finalized {
                             return Err(Error::<T>::InvalidStatus.into());
                         } else {
                             let current = &T::UnixTime::now().as_millis().saturated_into::<u64>();
                             if current >= &proposal._start {
                                 if current < &proposal._end {
-                                    ensure!(
-                                        proposal._privacy != PrivacyLevel::Opaque,
-                                        Error::<T>::ConflictWithPrivacyLevel
-                                    );
-                                    proposal.state.status = DAOProposalStatus::Ongoing;
+                                    // Do Nothing 
                                 } else {
-                                    proposal.state.status = DAOProposalStatus::Closed;
+                                    proposal.state.finalized = true;
                                 }
                             } else {
                                 return Err(Error::<T>::InvalidStatus.into());

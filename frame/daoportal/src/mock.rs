@@ -171,7 +171,11 @@ impl ExtBuilder {
             assert_ok!(DAOPortal::add_project(
                 Some(2).into(),
                 Project {
-                    owner: CrossChainAccount::Substrate(2),
+                    usergroup: UserGroup {
+                        owner: CrossChainAccount::Substrate(2),
+                        admins: Vec::new(),
+                        proposers: None,
+                    },
                     data: IpfsHash::default(),
                     workspaces: vec![valid_workspace.clone()]
                 }
