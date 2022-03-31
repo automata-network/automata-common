@@ -187,7 +187,7 @@ impl ExtBuilder {
             assert_ok!(DAOPortal::add_proposal(
                 Some(2).into(),
                 1,
-                Proposal {
+                DAOProposal {
                     _author: CrossChainAccount::Substrate(2),
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
@@ -196,13 +196,13 @@ impl ExtBuilder {
                     _start: 2000,
                     _end: 5000,
                     _frequency: Some(1000),
-                    state: ProposalState::default()
+                    state: DAOProposalState::default()
                 }
             ));
             assert_ok!(DAOPortal::add_proposal(
                 Some(2).into(),
                 1,
-                Proposal {
+                DAOProposal {
                     _author: CrossChainAccount::Substrate(2),
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
@@ -211,13 +211,13 @@ impl ExtBuilder {
                     _start: 2000,
                     _end: 5000,
                     _frequency: Some(1000),
-                    state: ProposalState::default()
+                    state: DAOProposalState::default()
                 }
             ));
             assert_ok!(DAOPortal::add_proposal(
                 Some(2).into(),
                 1,
-                Proposal {
+                DAOProposal {
                     _author: CrossChainAccount::Substrate(2),
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
@@ -226,7 +226,7 @@ impl ExtBuilder {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
-                    state: ProposalState::default()
+                    state: DAOProposalState::default()
                 }
             ));
             assert_eq!(DAOPortal::latest_proposal_id(1), 3);
