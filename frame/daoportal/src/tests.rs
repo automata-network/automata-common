@@ -255,7 +255,7 @@ fn direct_add_proposal() {
         assert_ok!(DAOPortal::add_proposal(
             Some(2).into(),
             1,
-            Proposal {
+            DAOProposal {
                 _author: CrossChainAccount::Substrate(2),
                 _voting_format: VotingFormat::SingleChoice,
                 _option_count: 2,
@@ -264,12 +264,11 @@ fn direct_add_proposal() {
                 _start: 2000,
                 _end: 5000,
                 _frequency: None,
-                state: ProposalState::default()
+                state: DAOProposalState::default()
             }
         ));
         assert_eq!(DAOPortal::latest_proposal_id(1), 1);
         let proposal_1 = DAOPortal::proposals(1, 1).unwrap();
-        // assert_eq!(proposal_1.state.status, ProposalStatus::Pending);
         assert_eq!(
             Balances::free_balance(&2),
             INIT_BALANCE - DAOPortal::vote_fee()
@@ -283,7 +282,7 @@ fn direct_add_proposal() {
         assert_ok!(DAOPortal::add_proposal(
             Some(2).into(),
             1,
-            Proposal {
+            DAOProposal {
                 _author: CrossChainAccount::Substrate(2),
                 _voting_format: VotingFormat::SingleChoice,
                 _option_count: 2,
@@ -292,20 +291,19 @@ fn direct_add_proposal() {
                 _start: 1000,
                 _end: 5000,
                 _frequency: None,
-                state: ProposalState::default()
+                state: DAOProposalState::default()
             }
         ));
 
         assert_eq!(DAOPortal::latest_proposal_id(1), 2);
         let proposal_2 = DAOPortal::proposals(1, 2).unwrap();
-        // assert_eq!(proposal_2.state.status, ProposalStatus::Ongoing);
 
         // Add an invalid proposal with invalid number of options
         assert_noop!(
             DAOPortal::add_proposal(
                 Some(2).into(),
                 1,
-                Proposal {
+                DAOProposal {
                     _author: CrossChainAccount::Substrate(2),
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 1,
@@ -314,7 +312,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
-                    state: ProposalState::default()
+                    state: DAOProposalState::default()
                 }
             ),
             Error::<Test>::InvalidProposal
@@ -325,7 +323,7 @@ fn direct_add_proposal() {
             DAOPortal::add_proposal(
                 Some(2).into(),
                 1,
-                Proposal {
+                DAOProposal {
                     _author: CrossChainAccount::Substrate(2),
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 4,
@@ -334,7 +332,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
-                    state: ProposalState::default()
+                    state: DAOProposalState::default()
                 }
             ),
             Error::<Test>::InvalidProposal
@@ -345,7 +343,7 @@ fn direct_add_proposal() {
             DAOPortal::add_proposal(
                 Some(2).into(),
                 1,
-                Proposal {
+                DAOProposal {
                     _author: CrossChainAccount::Substrate(2),
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
@@ -354,7 +352,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 2500,
                     _frequency: None,
-                    state: ProposalState::default()
+                    state: DAOProposalState::default()
                 }
             ),
             Error::<Test>::InvalidDuration
@@ -365,7 +363,7 @@ fn direct_add_proposal() {
             DAOPortal::add_proposal(
                 Some(2).into(),
                 1,
-                Proposal {
+                DAOProposal {
                     _author: CrossChainAccount::Substrate(2),
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
@@ -374,7 +372,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 12001,
                     _frequency: None,
-                    state: ProposalState::default()
+                    state: DAOProposalState::default()
                 }
             ),
             Error::<Test>::InvalidDuration
@@ -385,7 +383,7 @@ fn direct_add_proposal() {
             DAOPortal::add_proposal(
                 Some(3).into(),
                 1,
-                Proposal {
+                DAOProposal {
                     _author: CrossChainAccount::Substrate(2),
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
@@ -394,7 +392,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
-                    state: ProposalState::default()
+                    state: DAOProposalState::default()
                 }
             ),
             Error::<Test>::InsufficientBalance
@@ -408,7 +406,7 @@ fn direct_add_proposal() {
             DAOPortal::add_proposal(
                 Some(3).into(),
                 1,
-                Proposal {
+                DAOProposal {
                     _author: CrossChainAccount::Substrate(2),
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
@@ -417,7 +415,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: Some(1000),
-                    state: ProposalState::default()
+                    state: DAOProposalState::default()
                 }
             ),
             Error::<Test>::InsufficientBalance
@@ -434,7 +432,7 @@ fn direct_add_proposal() {
         assert_ok!(DAOPortal::add_proposal(
             Some(3).into(),
             1,
-            Proposal {
+            DAOProposal {
                 _author: CrossChainAccount::Substrate(2),
                 _voting_format: VotingFormat::SingleChoice,
                 _option_count: 2,
@@ -443,7 +441,7 @@ fn direct_add_proposal() {
                 _start: 2000,
                 _end: 5000,
                 _frequency: Some(1000),
-                state: ProposalState::default()
+                state: DAOProposalState::default()
             }
         ));
 
@@ -459,7 +457,7 @@ fn relay_add_proposal() {
         assert_ok!(DAOPortal::add_proposal(
             Some(1).into(),
             1,
-            Proposal {
+            DAOProposal {
                 _author: CrossChainAccount::Substrate(2),
                 _voting_format: VotingFormat::SingleChoice,
                 _option_count: 2,
@@ -468,7 +466,7 @@ fn relay_add_proposal() {
                 _start: 2000,
                 _end: 5000,
                 _frequency: Some(1),
-                state: ProposalState::default()
+                state: DAOProposalState::default()
             }
         ));
 
@@ -495,10 +493,6 @@ fn update_vote() {
         );
 
         Timestamp::set_timestamp(2000);
-        // assert_eq!(
-        //     DAOPortal::proposals(1, 1).unwrap().state.status,
-        //     ProposalStatus::Pending
-        // );
 
         // Proposal (1, 1) voted failed with incorrect votes size
         assert_noop!(
@@ -523,11 +517,6 @@ fn update_vote() {
                 pub_voters: None
             }
         ));
-        // Proposal (1, 1) status updated
-        // assert_eq!(
-        //     DAOPortal::proposals(1, 1).unwrap().state.status,
-        //     ProposalStatus::Ongoing
-        // );
 
         // Proposal (1, 2) voted failed with pub_voters not None
         assert_noop!(
@@ -542,20 +531,6 @@ fn update_vote() {
             ),
             Error::<Test>::ConflictWithPrivacyLevel
         );
-
-        // // Proposal (1, 3) voted failed as Opaque only open for vote when duration ended
-        // assert_noop!(
-        //     DAOPortal::update_vote(
-        //         Some(1).into(),
-        //         VoteUpdate {
-        //             project: 1,
-        //             proposal: 3,
-        //             votes: vec![0.into(); 2],
-        //             pub_voters: None,
-        //         }
-        //     ),
-        //     Error::<Test>::ConflictWithPrivacyLevel
-        // );
 
         Timestamp::set_timestamp(5000);
 

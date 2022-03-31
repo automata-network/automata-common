@@ -10,7 +10,7 @@ mod mock;
 mod tests;
 pub mod weights;
 
-mod datastructures;
+pub mod datastructures;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -86,7 +86,7 @@ pub mod pallet {
         ProjectId,
         Blake2_128Concat,
         ProposalId,
-        Proposal<T::AccountId>,
+        DAOProposal<T::AccountId>,
     >;
 
     #[pallet::event]
@@ -233,7 +233,7 @@ pub mod pallet {
         pub fn add_proposal(
             origin: OriginFor<T>,
             project_id: ProjectId,
-            mut proposal: Proposal<T::AccountId>,
+            proposal: DAOProposal<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             ensure!(proposal._option_count > 1, Error::<T>::InvalidProposal);
             ensure!(
@@ -252,6 +252,8 @@ pub mod pallet {
                 proposal._start.saturating_add(T::MaxDuration::get()) >= proposal._end,
                 Error::<T>::InvalidDuration
             );
+
+            // TODO: Reject Opaque proposal with frequency (or ignore it) 
 
             let who = ensure_signed(origin)?;
 
@@ -283,12 +285,7 @@ pub mod pallet {
                 )?;
             }
 
-            // let mut status = ProposalStatus::Pending;
-            // if proposal._start <= T::UnixTime::now().as_millis().saturated_into::<u64>() {
-            //     status = ProposalStatus::Ongoing;
-            // }
             proposal.state = ProposalState {
-                // status: status,
                 finalized: false,
                 snapshots: Vec::new(),
                 blacklisted: false,
@@ -309,7 +306,7 @@ pub mod pallet {
 			T::DAOPortalWeightInfo::update_vote(update.votes.len().saturated_into())
 		)]
         pub fn update_vote(origin: OriginFor<T>, update: VoteUpdate) -> DispatchResultWithPostInfo {
-            // TODO ensure the timing for geode update is valid
+            // TODO: ensure the timing for geode update is valid
             let who = ensure_signed(origin)?;
             ensure!(who == Self::relayer(), Error::<T>::NotRelayer);
             ensure!(
@@ -335,11 +332,7 @@ pub mod pallet {
                             let current = &T::UnixTime::now().as_millis().saturated_into::<u64>();
                             if current >= &proposal._start {
                                 if current < &proposal._end {
-                                    // ensure!(
-                                    //     proposal._privacy != PrivacyLevel::Opaque,
-                                    //     Error::<T>::ConflictWithPrivacyLevel
-                                    // );
-                                    // proposal.state.status = ProposalStatus::Ongoing;
+                                    // Do Nothing 
                                 } else {
                                     proposal.state.finalized = true;
                                 }
@@ -370,6 +363,19 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+        // TODO: admin calls
+        #[pallet::weight(0)]
+        pub fn clean_data(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+
+            Projects::<T>::remove_all(None);
+            Proposals::<T>::remove_all(None);
+            LatestProposalId::<T>::remove_all(None);
+            LatestProjectId::<T>::set(0);
+
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -377,11 +383,11 @@ pub mod pallet {
             <Projects<T>>::iter().collect()
         }
 
-        pub fn get_proposals(project: ProjectId) -> Vec<(ProposalId, Proposal<T::AccountId>)> {
+        pub fn get_proposals(project: ProjectId) -> Vec<(ProposalId, DAOProposal<T::AccountId>)> {
             <Proposals<T>>::iter_prefix(project).collect()
         }
 
-        pub fn get_all_proposals() -> Vec<(ProjectId, ProposalId, Proposal<T::AccountId>)> {
+        pub fn get_all_proposals() -> Vec<(ProjectId, ProposalId, DAOProposal<T::AccountId>)> {
             <Proposals<T>>::iter().collect()
         }
 

@@ -4,7 +4,10 @@
 // use sp_std::prelude::*;
 use codec::{Decode, Encode};
 
-use sp_core::U256;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
+use sp_core::{U256, H160};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
@@ -13,9 +16,10 @@ pub type ProjectId = u32;
 pub type ProposalId = u32;
 pub type OptionIndex = u8;
 pub type VotingPower = U256;
-pub type IpfsHash = sp_core::H256;
-pub type EthAddress = sp_core::H160;
+pub type IpfsHash = Vec<u8>;
+pub type EthAddress = H160;
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum CrossChainAccount<AccountId> {
     Solidity(EthAddress),
@@ -28,27 +32,32 @@ pub enum Protocol {
     Substrate,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum Strategy {
     Solidity(SolidityStrategy),
     Substrate(SubstrateStrategy),
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Ord, PartialOrd)]
 pub enum SolidityStrategy {
     ERC20Balance(EthAddress),
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Ord, PartialOrd)]
 pub enum SubstrateStrategy {
     NativeBalance,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum VotingFormat {
     SingleChoice,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct UserGroup<AccountId> {
     pub owner: CrossChainAccount<AccountId>,
@@ -69,14 +78,16 @@ pub struct Chain {
     pub _protocol: Protocol,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct Workspace {
     pub _chain: ChainIndex,
     pub strategies: Vec<Strategy>,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct Proposal<AccountId> {
+pub struct DAOProposal<AccountId> {
     pub _author: CrossChainAccount<AccountId>,
     pub _voting_format: VotingFormat,
     pub _option_count: OptionIndex,
@@ -85,9 +96,10 @@ pub struct Proposal<AccountId> {
     pub _start: u64,
     pub _end: u64,
     pub _frequency: Option<u64>,
-    pub state: ProposalState,
+    pub state: DAOProposalState,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum PrivacyLevel {
     Opaque,
@@ -96,15 +108,9 @@ pub enum PrivacyLevel {
     Mixed,
 }
 
-// #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-// pub enum ProposalStatus {
-//     Pending,
-//     Ongoing,
-//     Closed,
-// }
-
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct ProposalState {
+pub struct DAOProposalState {
     // pub status: ProposalStatus,
     pub finalized: bool,
     pub snapshots: Vec<U256>,
@@ -114,9 +120,9 @@ pub struct ProposalState {
     pub updates: u32,
 }
 
-impl Default for ProposalState {
+impl Default for DAOProposalState {
     fn default() -> Self {
-        ProposalState {
+        DAOProposalState {
             finalized: false,
             snapshots: Vec::new(),
             blacklisted: false,
