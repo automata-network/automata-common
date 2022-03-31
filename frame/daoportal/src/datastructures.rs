@@ -50,8 +50,16 @@ pub enum VotingFormat {
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct Project<AccountId> {
+pub struct UserGroup<AccountId> {
     pub owner: CrossChainAccount<AccountId>,
+    pub admins: Vec<CrossChainAccount<AccountId>>,
+    pub proposers: Option<Vec<CrossChainAccount<AccountId>>>
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct Project<AccountId> {
+    // pub owner: CrossChainAccount<AccountId>,
+    pub usergroup: UserGroup<AccountId>,
     pub data: IpfsHash,
     pub workspaces: Vec<Workspace>,
 }
@@ -88,16 +96,19 @@ pub enum PrivacyLevel {
     Mixed,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub enum ProposalStatus {
-    Pending,
-    Ongoing,
-    Closed,
-}
+// #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+// pub enum ProposalStatus {
+//     Pending,
+//     Ongoing,
+//     Closed,
+// }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct ProposalState {
-    pub status: ProposalStatus,
+    // pub status: ProposalStatus,
+    pub finalized: bool,
+    pub snapshots: Vec<U256>,
+    pub blacklisted: bool,
     pub votes: Vec<VotingPower>,
     pub pub_voters: Option<IpfsHash>,
     pub updates: u32,
@@ -106,7 +117,9 @@ pub struct ProposalState {
 impl Default for ProposalState {
     fn default() -> Self {
         ProposalState {
-            status: ProposalStatus::Pending,
+            finalized: false,
+            snapshots: Vec::new(),
+            blacklisted: false,
             votes: Vec::new(),
             pub_voters: None,
             updates: 0,

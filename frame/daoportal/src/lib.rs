@@ -207,7 +207,7 @@ pub mod pallet {
                 if let Some(ref mut p) = p {
                     if who != Self::relayer() {
                         ensure!(
-                            CrossChainAccount::<T::AccountId>::Substrate(who) == p.owner,
+                            CrossChainAccount::<T::AccountId>::Substrate(who) == p.usergroup.owner,
                             Error::<T>::InvalidSenderOrigin
                         );
                     }
@@ -283,12 +283,15 @@ pub mod pallet {
                 )?;
             }
 
-            let mut status = ProposalStatus::Pending;
-            if proposal._start <= T::UnixTime::now().as_millis().saturated_into::<u64>() {
-                status = ProposalStatus::Ongoing;
-            }
+            // let mut status = ProposalStatus::Pending;
+            // if proposal._start <= T::UnixTime::now().as_millis().saturated_into::<u64>() {
+            //     status = ProposalStatus::Ongoing;
+            // }
             proposal.state = ProposalState {
-                status: status,
+                // status: status,
+                finalized: false,
+                snapshots: Vec::new(),
+                blacklisted: false,
                 votes: vec![0.into(); proposal._option_count.into()],
                 pub_voters: None,
                 updates: 0,
@@ -326,19 +329,19 @@ pub mod pallet {
                             update.votes.len() == proposal.state.votes.len(),
                             Error::<T>::InvalidVote
                         );
-                        if &proposal.state.status == &ProposalStatus::Closed {
+                        if proposal.state.finalized {
                             return Err(Error::<T>::InvalidStatus.into());
                         } else {
                             let current = &T::UnixTime::now().as_millis().saturated_into::<u64>();
                             if current >= &proposal._start {
                                 if current < &proposal._end {
-                                    ensure!(
-                                        proposal._privacy != PrivacyLevel::Opaque,
-                                        Error::<T>::ConflictWithPrivacyLevel
-                                    );
-                                    proposal.state.status = ProposalStatus::Ongoing;
+                                    // ensure!(
+                                    //     proposal._privacy != PrivacyLevel::Opaque,
+                                    //     Error::<T>::ConflictWithPrivacyLevel
+                                    // );
+                                    // proposal.state.status = ProposalStatus::Ongoing;
                                 } else {
-                                    proposal.state.status = ProposalStatus::Closed;
+                                    proposal.state.finalized = true;
                                 }
                             } else {
                                 return Err(Error::<T>::InvalidStatus.into());
