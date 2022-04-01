@@ -26,6 +26,7 @@ pub enum CrossChainAccount<AccountId> {
     Substrate(AccountId),
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum Protocol {
     Solidity,
@@ -65,6 +66,7 @@ pub struct UserGroup<AccountId> {
     pub proposers: Option<Vec<CrossChainAccount<AccountId>>>
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct Project<AccountId> {
     // pub owner: CrossChainAccount<AccountId>,
@@ -73,6 +75,7 @@ pub struct Project<AccountId> {
     pub workspaces: Vec<Workspace>,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct Chain {
     pub _protocol: Protocol,
