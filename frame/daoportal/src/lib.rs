@@ -233,7 +233,7 @@ pub mod pallet {
         pub fn add_proposal(
             origin: OriginFor<T>,
             project_id: ProjectId,
-            proposal: DAOProposal<T::AccountId>,
+            mut proposal: DAOProposal<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             ensure!(proposal._option_count > 1, Error::<T>::InvalidProposal);
             ensure!(
@@ -285,7 +285,7 @@ pub mod pallet {
                 )?;
             }
 
-            proposal.state = ProposalState {
+            proposal.state = DAOProposalState {
                 finalized: false,
                 snapshots: Vec::new(),
                 blacklisted: false,
