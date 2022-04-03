@@ -174,6 +174,7 @@ impl ExtBuilder {
                     usergroup: UserGroup {
                         owner: CrossChainAccount::Substrate(2),
                         admins: Vec::new(),
+                        maintainers: Vec::new(),
                         proposers: None,
                     },
                     data: IpfsHash::default(),
@@ -226,7 +227,7 @@ impl ExtBuilder {
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
                     _data: IpfsHash::default(),
-                    _privacy: PrivacyLevel::Opaque,
+                    _privacy: PrivacyLevel::Opaque(1, false),
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,

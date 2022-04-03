@@ -63,6 +63,7 @@ pub enum VotingFormat {
 pub struct UserGroup<AccountId> {
     pub owner: CrossChainAccount<AccountId>,
     pub admins: Vec<CrossChainAccount<AccountId>>,
+    pub maintainers: Vec<CrossChainAccount<AccountId>>,
     pub proposers: Option<Vec<CrossChainAccount<AccountId>>>
 }
 
@@ -105,7 +106,7 @@ pub struct DAOProposal<AccountId> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum PrivacyLevel {
-    Opaque,
+    Opaque(u8, bool),
     Private,
     Public,
     Mixed,

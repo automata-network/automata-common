@@ -260,17 +260,15 @@ pub mod pallet {
             let relayer = Self::relayer();
             if who != relayer {
                 let mut update_count: u32 = 1;
-                if proposal._privacy != PrivacyLevel::Opaque {
-                    if let Some(f) = proposal._frequency {
-                        ensure!(f > 0, Error::<T>::InvalidFrequency);
-                        update_count = (proposal
-                            ._end
-                            .saturating_sub(proposal._start)
-                            .saturating_sub(1)
-                            / f)
-                            .saturated_into::<u32>()
-                            .saturating_add(update_count);
-                    }
+                if let Some(f) = proposal._frequency {
+                    ensure!(f > 0, Error::<T>::InvalidFrequency);
+                    update_count = (proposal
+                        ._end
+                        .saturating_sub(proposal._start)
+                        .saturating_sub(1)
+                        / f)
+                        .saturated_into::<u32>()
+                        .saturating_add(update_count);
                 }
                 let fee = Self::vote_fee().saturating_mul(update_count.into());
                 ensure!(

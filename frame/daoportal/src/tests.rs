@@ -47,6 +47,7 @@ fn direct_project_manipulation() {
                 usergroup: UserGroup {
                     owner: CrossChainAccount::Substrate(2),
                     admins: Vec::new(),
+                    maintainers: Vec::new(),
                     proposers: None,
                 },
                 data: IpfsHash::default(),
@@ -61,6 +62,7 @@ fn direct_project_manipulation() {
                     usergroup: UserGroup {
                         owner: CrossChainAccount::Substrate(2),
                         admins: Vec::new(),
+                        maintainers: Vec::new(),
                         proposers: None,
                     },
                     data: IpfsHash::default(),
@@ -77,6 +79,7 @@ fn direct_project_manipulation() {
                     usergroup: UserGroup {
                         owner: CrossChainAccount::Substrate(2),
                         admins: Vec::new(),
+                        maintainers: Vec::new(),
                         proposers: None,
                     },
                     data: IpfsHash::default(),
@@ -96,6 +99,7 @@ fn direct_project_manipulation() {
                     usergroup: UserGroup {
                         owner: CrossChainAccount::Substrate(2),
                         admins: Vec::new(),
+                        maintainers: Vec::new(),
                         proposers: None,
                     },
                     data: IpfsHash::default(),
@@ -116,6 +120,7 @@ fn direct_project_manipulation() {
                     usergroup: UserGroup {
                         owner: CrossChainAccount::Substrate(2),
                         admins: Vec::new(),
+                        maintainers: Vec::new(),
                         proposers: None,
                     },
                     data: IpfsHash::default(),
@@ -135,6 +140,7 @@ fn direct_project_manipulation() {
                 usergroup: UserGroup {
                     owner: CrossChainAccount::Substrate(3),
                     admins: Vec::new(),
+                    maintainers: Vec::new(),
                     proposers: None,
                 },
                 data: IpfsHash::default(),
@@ -150,6 +156,7 @@ fn direct_project_manipulation() {
                     usergroup: UserGroup {
                         owner: CrossChainAccount::Substrate(4),
                         admins: Vec::new(),
+                        maintainers: Vec::new(),
                         proposers: None,
                     },
                     data: IpfsHash::default(),
@@ -166,6 +173,7 @@ fn direct_project_manipulation() {
                 usergroup: UserGroup {
                     owner: CrossChainAccount::Substrate(4),
                     admins: Vec::new(),
+                    maintainers: Vec::new(),
                     proposers: None,
                 },
                 data: IpfsHash::default(),
@@ -191,6 +199,7 @@ fn relay_project_manipulation() {
                 usergroup: UserGroup {
                     owner: CrossChainAccount::Solidity(EthAddress::zero()),
                     admins: Vec::new(),
+                    maintainers: Vec::new(),
                     proposers: None,
                 },
                 data: IpfsHash::default(),
@@ -209,6 +218,7 @@ fn relay_project_manipulation() {
                     usergroup: UserGroup {
                         owner: CrossChainAccount::Substrate(2),
                         admins: Vec::new(),
+                        maintainers: Vec::new(),
                         proposers: None,
                     },
                     data: IpfsHash::default(),
@@ -225,6 +235,7 @@ fn relay_project_manipulation() {
                 usergroup: UserGroup {
                     owner: CrossChainAccount::Substrate(2),
                     admins: Vec::new(),
+                    maintainers: Vec::new(),
                     proposers: None,
                 },
                 data: IpfsHash::default(),
@@ -239,6 +250,7 @@ fn relay_project_manipulation() {
                 usergroup: UserGroup {
                     owner: CrossChainAccount::Substrate(3),
                     admins: Vec::new(),
+                    maintainers: Vec::new(),
                     proposers: None,
                 },
                 data: IpfsHash::default(),
@@ -260,7 +272,7 @@ fn direct_add_proposal() {
                 _voting_format: VotingFormat::SingleChoice,
                 _option_count: 2,
                 _data: IpfsHash::default(),
-                _privacy: PrivacyLevel::Opaque,
+                _privacy: PrivacyLevel::Opaque(1, false),
                 _start: 2000,
                 _end: 5000,
                 _frequency: None,
@@ -287,7 +299,7 @@ fn direct_add_proposal() {
                 _voting_format: VotingFormat::SingleChoice,
                 _option_count: 2,
                 _data: IpfsHash::default(),
-                _privacy: PrivacyLevel::Opaque,
+                _privacy: PrivacyLevel::Opaque(1, false),
                 _start: 1000,
                 _end: 5000,
                 _frequency: None,
@@ -308,7 +320,7 @@ fn direct_add_proposal() {
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 1,
                     _data: IpfsHash::default(),
-                    _privacy: PrivacyLevel::Opaque,
+                    _privacy: PrivacyLevel::Opaque(1, false),
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
@@ -328,7 +340,7 @@ fn direct_add_proposal() {
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 4,
                     _data: IpfsHash::default(),
-                    _privacy: PrivacyLevel::Opaque,
+                    _privacy: PrivacyLevel::Opaque(1, false),
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
@@ -348,7 +360,7 @@ fn direct_add_proposal() {
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
                     _data: IpfsHash::default(),
-                    _privacy: PrivacyLevel::Opaque,
+                    _privacy: PrivacyLevel::Opaque(1, false),
                     _start: 2000,
                     _end: 2500,
                     _frequency: None,
@@ -368,7 +380,7 @@ fn direct_add_proposal() {
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
                     _data: IpfsHash::default(),
-                    _privacy: PrivacyLevel::Opaque,
+                    _privacy: PrivacyLevel::Opaque(1, false),
                     _start: 2000,
                     _end: 12001,
                     _frequency: None,
@@ -388,7 +400,7 @@ fn direct_add_proposal() {
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
                     _data: IpfsHash::default(),
-                    _privacy: PrivacyLevel::Opaque,
+                    _privacy: PrivacyLevel::Opaque(1, false),
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
