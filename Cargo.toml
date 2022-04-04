@@ -22,3 +22,6 @@ members = [
 # Automata runtime requires unwinding.
 panic = "unwind"
 
+[patch.crates-io.ed25519]
+git = "https://github.com/RustCrypto/signatures.git"
+tag = "ed25519/v1.3.0"
