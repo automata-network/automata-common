@@ -227,7 +227,7 @@ impl ExtBuilder {
                     _voting_format: VotingFormat::SingleChoice,
                     _option_count: 2,
                     _data: IpfsHash::default(),
-                    _privacy: PrivacyLevel::Opaque(1, false),
+                    _privacy: PrivacyLevel::Opaque(1),
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,

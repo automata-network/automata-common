@@ -106,7 +106,8 @@ pub struct DAOProposal<AccountId> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum PrivacyLevel {
-    Opaque(u8, bool),
+    Opaque(u8),
+    Rank,
     Private,
     Public,
     Mixed,
