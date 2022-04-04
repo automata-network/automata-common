@@ -56,6 +56,7 @@ pub enum SubstrateStrategy {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum VotingFormat {
     SingleChoice,
+    SplitVote
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
