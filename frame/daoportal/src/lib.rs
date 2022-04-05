@@ -295,7 +295,10 @@ pub mod pallet {
                 )?;
             }
 
-            proposal._workspaces = Self::projects(project_id).ok_or(Error::<T>::InvalidProject)?.workspaces.clone();
+            proposal._workspaces = Self::projects(project_id)
+                .ok_or(Error::<T>::InvalidProject)?
+                .workspaces
+                .clone();
 
             proposal.state = DAOProposalState {
                 finalized: false,
