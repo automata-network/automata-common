@@ -101,6 +101,7 @@ pub struct DAOProposal<AccountId> {
     pub _start: u64,
     pub _end: u64,
     pub _frequency: Option<u64>,
+    pub _workspaces: Vec<Workspace>,
     pub state: DAOProposalState,
 }
 

@@ -132,6 +132,7 @@ pub mod pallet {
         DuplicateWorkspace,
         DuplicateStrategy,
         FeatureNotSupported,
+        InvalidSnapshots,
     }
 
     #[pallet::hooks]
@@ -294,6 +295,8 @@ pub mod pallet {
                 )?;
             }
 
+            proposal._workspaces = Self::projects(project_id).ok_or(Error::<T>::InvalidProject)?.workspaces.clone();
+
             proposal.state = DAOProposalState {
                 finalized: false,
                 snapshots: Vec::new(),
@@ -393,6 +396,10 @@ pub mod pallet {
             );
             Proposals::<T>::try_mutate(project_id, proposal_id, |proposal| -> DispatchResult {
                 if let Some(ref mut proposal) = proposal {
+                    ensure!(
+                        snapshots.len() == proposal._workspaces.len(),
+                        Error::<T>::InvalidSnapshots
+                    );
                     if proposal.state.finalized {
                         return Err(Error::<T>::InvalidStatus.into());
                     } else {
