@@ -23,6 +23,7 @@ pub mod pallet {
         ensure,
         traits::{Currency, ExistenceRequirement, Get, UnixTime},
     };
+    use sp_core::U256;
     use sp_runtime::{traits::Saturating, DispatchResult, SaturatedConversion};
     use sp_std::{collections::btree_set::BTreeSet, prelude::*};
 
@@ -107,6 +108,8 @@ pub mod pallet {
         ProposalCreated(ProjectId, ProposalId),
         /// Vote updated. \[project_id, proposal_id\]
         VoteUpdated(ProjectId, ProposalId),
+        /// Snapshots updated. \[project_id, proposal_id]
+        SnapshotsUpdated(ProjectId, ProposalId),
     }
 
     #[pallet::error]
@@ -128,6 +131,7 @@ pub mod pallet {
         ConflictWithPrivacyLevel,
         DuplicateWorkspace,
         DuplicateStrategy,
+        FeatureNotSupported,
     }
 
     #[pallet::hooks]
@@ -252,8 +256,15 @@ pub mod pallet {
                 proposal._start.saturating_add(T::MaxDuration::get()) >= proposal._end,
                 Error::<T>::InvalidDuration
             );
+            ensure!(
+                proposal._privacy != PrivacyLevel::Rank,
+                Error::<T>::FeatureNotSupported
+            );
+            if let PrivacyLevel::Opaque(count) = proposal._privacy {
+                ensure!(count == 1, Error::<T>::FeatureNotSupported)
+            }
 
-            // TODO: Reject Opaque proposal with frequency (or ignore it) 
+            // TODO: Reject Opaque proposal with frequency (or ignore it)
 
             let who = ensure_signed(origin)?;
 
@@ -330,7 +341,7 @@ pub mod pallet {
                             let current = &T::UnixTime::now().as_millis().saturated_into::<u64>();
                             if current >= &proposal._start {
                                 if current < &proposal._end {
-                                    // Do Nothing 
+                                    // Do Nothing
                                 } else {
                                     proposal.state.finalized = true;
                                 }
@@ -358,6 +369,46 @@ pub mod pallet {
                     }
                 },
             )?;
+
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn update_snapshots(
+            origin: OriginFor<T>,
+            project_id: ProjectId,
+            proposal_id: ProposalId,
+            snapshots: Vec<Option<U256>>,
+        ) -> DispatchResultWithPostInfo {
+            // TODO: ensure the timing for geode update is valid
+            let who = ensure_signed(origin)?;
+            ensure!(who == Self::relayer(), Error::<T>::NotRelayer);
+            ensure!(
+                project_id <= Self::latest_project_id(),
+                Error::<T>::InvalidProject
+            );
+            ensure!(
+                proposal_id <= Self::latest_proposal_id(project_id),
+                Error::<T>::InvalidProposal
+            );
+            Proposals::<T>::try_mutate(project_id, proposal_id, |proposal| -> DispatchResult {
+                if let Some(ref mut proposal) = proposal {
+                    if proposal.state.finalized {
+                        return Err(Error::<T>::InvalidStatus.into());
+                    } else {
+                        let current = &T::UnixTime::now().as_millis().saturated_into::<u64>();
+                        if current >= &proposal._start {
+                            proposal.state.snapshots = snapshots;
+                            Self::deposit_event(Event::SnapshotsUpdated(project_id, proposal_id));
+                        } else {
+                            return Err(Error::<T>::InvalidStatus.into());
+                        }
+                    }
+                    Ok(())
+                } else {
+                    Err(Error::<T>::InvalidProposal.into())
+                }
+            })?;
 
             Ok(().into())
         }

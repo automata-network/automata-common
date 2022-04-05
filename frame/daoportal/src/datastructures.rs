@@ -7,7 +7,7 @@ use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use sp_core::{U256, H160};
+use sp_core::{H160, U256};
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
@@ -56,7 +56,7 @@ pub enum SubstrateStrategy {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum VotingFormat {
     SingleChoice,
-    SplitVote
+    SplitVote,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -65,7 +65,7 @@ pub struct UserGroup<AccountId> {
     pub owner: CrossChainAccount<AccountId>,
     pub admins: Vec<CrossChainAccount<AccountId>>,
     pub maintainers: Vec<CrossChainAccount<AccountId>>,
-    pub proposers: Option<Vec<CrossChainAccount<AccountId>>>
+    pub proposers: Option<Vec<CrossChainAccount<AccountId>>>,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -119,7 +119,7 @@ pub enum PrivacyLevel {
 pub struct DAOProposalState {
     // pub status: ProposalStatus,
     pub finalized: bool,
-    pub snapshots: Vec<U256>,
+    pub snapshots: Vec<Option<U256>>,
     pub blacklisted: bool,
     pub votes: Vec<VotingPower>,
     pub pub_voters: Option<IpfsHash>,

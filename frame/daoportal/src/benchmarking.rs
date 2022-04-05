@@ -153,7 +153,7 @@ benchmarks! {
         let caller: T::AccountId = account("caller", 1, 0);
 
         prepare_direct::<T>(&caller, false);
-    }: add_proposal(RawOrigin::Signed(caller.clone()), 1, DAOProposal {
+    }: add_proposal(RawOrigin::Signed(caller.clone()), 1, Proposal {
         _author: CrossChainAccount::Substrate(caller.clone()),
         _voting_format: VotingFormat::SingleChoice,
         _option_count: s.try_into().unwrap(),
@@ -162,7 +162,7 @@ benchmarks! {
         _start: 0,
         _end: 7600000,
         _frequency: Some(3600000),
-        state: DAOProposalState::default()
+        state: ProposalState::default()
     })
     verify {
         assert_eq!(DAOPortal::<T>::latest_proposal_id(1), 1);
@@ -174,7 +174,7 @@ benchmarks! {
         let relayer: T::AccountId = account("relayer", 0, 0);
 
         prepare_direct::<T>(&relayer, true);
-    }: add_proposal(RawOrigin::Signed(relayer.clone()), 1, DAOProposal {
+    }: add_proposal(RawOrigin::Signed(relayer.clone()), 1, Proposal {
         _author: CrossChainAccount::Solidity(EthAddress::default()),
         _voting_format: VotingFormat::SingleChoice,
         _option_count: s.try_into().unwrap(),
@@ -183,7 +183,7 @@ benchmarks! {
         _start: 0,
         _end: 7600000,
         _frequency: Some(3600000),
-        state: DAOProposalState::default()
+        state: ProposalState::default()
     })
     verify {
         assert_eq!(DAOPortal::<T>::latest_proposal_id(1), 1);
@@ -196,7 +196,7 @@ benchmarks! {
 
         prepare_direct::<T>(&relayer, true);
 
-        DAOPortal::<T>::add_proposal(RawOrigin::Signed(relayer.clone()).into(), 1, DAOProposal {
+        DAOPortal::<T>::add_proposal(RawOrigin::Signed(relayer.clone()).into(), 1, Proposal {
             _author: CrossChainAccount::Substrate(account("caller", 1, 0)),
             _voting_format: VotingFormat::SingleChoice,
             _option_count: s.try_into().unwrap(),
@@ -205,7 +205,7 @@ benchmarks! {
             _start: 0,
             _end: 7600000,
             _frequency: Some(3600000),
-            state: DAOProposalState::default()
+            state: ProposalState::default()
         });
     }: update_vote(RawOrigin::Signed(relayer.clone()), VoteUpdate {
         project: 1,

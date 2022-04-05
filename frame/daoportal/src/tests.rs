@@ -556,9 +556,6 @@ fn update_vote() {
                 pub_voters: None,
             }
         ));
-        assert_eq!(
-            DAOPortal::proposals(1, 3).unwrap().state.finalized,
-            true
-        );
+        assert_eq!(DAOPortal::proposals(1, 3).unwrap().state.finalized, true);
     });
 }
