@@ -96,6 +96,8 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// Chain registered. \[chain_index\]
         ChainRegistered(ChainIndex),
+        /// Chain registered. \[chain_index\]
+        ChainRemoved(ChainIndex),
         /// Relayer updated. \[relayer\]
         RelayerUpdated(T::AccountId),
         /// Vote fee updated. \[relayer\]
@@ -150,6 +152,20 @@ pub mod pallet {
             LatestChainIndex::<T>::set(chain_index);
 
             Self::deposit_event(Event::ChainRegistered(chain_index));
+
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn remove_last_chain(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+
+            let chain_index = Self::latest_chain_index();
+
+            Chains::<T>::remove(chain_index);
+            LatestChainIndex::<T>::set(chain_index.saturating_sub(1));
+
+            Self::deposit_event(Event::ChainRemoved(chain_index));
 
             Ok(().into())
         }

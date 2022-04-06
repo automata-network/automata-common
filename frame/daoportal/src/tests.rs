@@ -276,6 +276,7 @@ fn direct_add_proposal() {
                 _start: 2000,
                 _end: 5000,
                 _frequency: None,
+                _workspaces: Vec::new(),
                 state: DAOProposalState::default()
             }
         ));
@@ -303,6 +304,7 @@ fn direct_add_proposal() {
                 _start: 1000,
                 _end: 5000,
                 _frequency: None,
+                _workspaces: Vec::new(),
                 state: DAOProposalState::default()
             }
         ));
@@ -324,6 +326,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
+                    _workspaces: Vec::new(),
                     state: DAOProposalState::default()
                 }
             ),
@@ -344,6 +347,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
+                    _workspaces: Vec::new(),
                     state: DAOProposalState::default()
                 }
             ),
@@ -364,6 +368,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 2500,
                     _frequency: None,
+                    _workspaces: Vec::new(),
                     state: DAOProposalState::default()
                 }
             ),
@@ -384,6 +389,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 12001,
                     _frequency: None,
+                    _workspaces: Vec::new(),
                     state: DAOProposalState::default()
                 }
             ),
@@ -404,6 +410,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
+                    _workspaces: Vec::new(),
                     state: DAOProposalState::default()
                 }
             ),
@@ -427,6 +434,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: Some(1000),
+                    _workspaces: Vec::new(),
                     state: DAOProposalState::default()
                 }
             ),
@@ -453,6 +461,7 @@ fn direct_add_proposal() {
                 _start: 2000,
                 _end: 5000,
                 _frequency: Some(1000),
+                _workspaces: Vec::new(),
                 state: DAOProposalState::default()
             }
         ));
@@ -478,6 +487,7 @@ fn relay_add_proposal() {
                 _start: 2000,
                 _end: 5000,
                 _frequency: Some(1),
+                _workspaces: Vec::new(),
                 state: DAOProposalState::default()
             }
         ));

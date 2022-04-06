@@ -201,6 +201,7 @@ impl ExtBuilder {
                     _start: 2000,
                     _end: 5000,
                     _frequency: Some(1000),
+                    _workspaces: Vec::new(),
                     state: DAOProposalState::default()
                 }
             ));
@@ -216,6 +217,7 @@ impl ExtBuilder {
                     _start: 2000,
                     _end: 5000,
                     _frequency: Some(1000),
+                    _workspaces: Vec::new(),
                     state: DAOProposalState::default()
                 }
             ));
@@ -231,6 +233,7 @@ impl ExtBuilder {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
+                    _workspaces: Vec::new(),
                     state: DAOProposalState::default()
                 }
             ));
