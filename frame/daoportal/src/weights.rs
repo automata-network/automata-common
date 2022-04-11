@@ -43,8 +43,8 @@ pub trait WeightInfo {
 	fn update_relayer() -> Weight;
 	fn update_vote_fee() -> Weight;
 	fn add_project(workspaces: &Vec<Workspace>, ) -> Weight;
-	fn update_project_direct(workspaces: &Vec<Workspace>, ) -> Weight;
-	fn update_project_relay(workspaces: &Vec<Workspace>, ) -> Weight;
+	fn update_project_direct(workspaces: &Option<Vec<Workspace>>, ) -> Weight;
+	fn update_project_relay(workspaces: &Option<Vec<Workspace>>, ) -> Weight;
 	fn add_proposal_direct(s: u32, ) -> Weight;
 	fn add_proposal_relay(s: u32, ) -> Weight;
 	fn update_vote(s: u32, ) -> Weight;
@@ -88,9 +88,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: DAOPortal Relayer (r:1 w:0)
 	// Storage: DAOPortal LatestChainIndex (r:1 w:0)
 	// Storage: DAOPortal Chains (r:1 w:0)
-	fn update_project_direct(workspaces: &Vec<Workspace>, ) -> Weight {
+	fn update_project_direct(workspaces: &Option<Vec<Workspace>>, ) -> Weight {
 		let mut s = 0;
-		workspaces.into_iter().map(|w| s += w.strategies.len());
+		if let Some(ws) = workspaces {
+			ws.into_iter().map(|w| s += w.strategies.len());
+		}
 		(66_699_000 as Weight)
 			// Standard Error: 0
 			.saturating_add((1_490_000 as Weight).saturating_mul(s as Weight))
@@ -102,9 +104,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: DAOPortal Relayer (r:1 w:0)
 	// Storage: DAOPortal LatestChainIndex (r:1 w:0)
 	// Storage: DAOPortal Chains (r:1 w:0)
-	fn update_project_relay(workspaces: &Vec<Workspace>, ) -> Weight {
+	fn update_project_relay(workspaces: &Option<Vec<Workspace>>, ) -> Weight {
 		let mut s = 0;
-		workspaces.into_iter().map(|w| s += w.strategies.len());
+		if let Some(ws) = workspaces {
+			ws.into_iter().map(|w| s += w.strategies.len());
+		}
 		(66_518_000 as Weight)
 			// Standard Error: 0
 			.saturating_add((1_490_000 as Weight).saturating_mul(s as Weight))
@@ -187,9 +191,11 @@ impl WeightInfo for () {
 	// Storage: DAOPortal Relayer (r:1 w:0)
 	// Storage: DAOPortal LatestChainIndex (r:1 w:0)
 	// Storage: DAOPortal Chains (r:1 w:0)
-	fn update_project_direct(workspaces: &Vec<Workspace>, ) -> Weight {
+	fn update_project_direct(workspaces: &Option<Vec<Workspace>>, ) -> Weight {
 		let mut s = 0;
-		workspaces.into_iter().map(|w| s += w.strategies.len());
+		if let Some(ws) = workspaces {
+			ws.into_iter().map(|w| s += w.strategies.len());
+		}
 		(66_699_000 as Weight)
 			// Standard Error: 0
 			.saturating_add((1_490_000 as Weight).saturating_mul(s as Weight))
@@ -201,9 +207,11 @@ impl WeightInfo for () {
 	// Storage: DAOPortal Relayer (r:1 w:0)
 	// Storage: DAOPortal LatestChainIndex (r:1 w:0)
 	// Storage: DAOPortal Chains (r:1 w:0)
-	fn update_project_relay(workspaces: &Vec<Workspace>, ) -> Weight {
+	fn update_project_relay(workspaces: &Option<Vec<Workspace>>, ) -> Weight {
 		let mut s = 0;
-		workspaces.into_iter().map(|w| s += w.strategies.len());
+		if let Some(ws) = workspaces {
+			ws.into_iter().map(|w| s += w.strategies.len());
+		}
 		(66_518_000 as Weight)
 			// Standard Error: 0
 			.saturating_add((1_490_000 as Weight).saturating_mul(s as Weight))

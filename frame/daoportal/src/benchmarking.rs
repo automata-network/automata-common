@@ -15,8 +15,9 @@ use datastructures::*;
 //     DAOPortal::<T>::update_relayer()
 // }
 
-fn generate_workspace_n_strategy<T: Config>(proj: &mut Project<T::AccountId>, s: u32) {
+fn generate_workspace_n_strategy<T: Config>(s: u32) -> Vec<Workspace> {
     let mut l = 0;
+    let mut workspaces = Vec::new(); 
     while l < s {
         DAOPortal::<T>::register_chain(
             RawOrigin::Root.into(),
@@ -41,8 +42,9 @@ fn generate_workspace_n_strategy<T: Config>(proj: &mut Project<T::AccountId>, s:
             c += 1;
         }
         workspace.strategies = strategies;
-        proj.workspaces.push(workspace);
+        workspaces.push(workspace);
     }
+    workspaces
 }
 
 fn prepare_direct<T: Config>(caller: &T::AccountId, relay: bool) {
@@ -102,9 +104,7 @@ benchmarks! {
             data: IpfsHash::default(),
             workspaces: Vec::new(),
         };
-
-        generate_workspace_n_strategy::<T>(&mut project, s);
-    }: add_project(RawOrigin::Signed(caller.clone()), project.clone())
+    }: add_project(RawOrigin::Signed(caller.clone()), project.clone(), generate_workspace_n_strategy::<T>(s))
     verify {
         assert_eq!(DAOPortal::<T>::projects(1).unwrap(), project);
     }
@@ -121,9 +121,7 @@ benchmarks! {
             data: IpfsHash::default(),
             workspaces: Vec::new(),
         };
-
-        generate_workspace_n_strategy::<T>(&mut project, s);
-    }: update_project(RawOrigin::Signed(caller.clone()), 1, project.clone())
+    }: update_project(RawOrigin::Signed(caller.clone()), 1, project.clone(), Some(generate_workspace_n_strategy::<T>(s)))
     verify {
         assert_eq!(DAOPortal::<T>::projects(1).unwrap(), project);
     }
@@ -141,8 +139,7 @@ benchmarks! {
             workspaces: Vec::new(),
         };
 
-        generate_workspace_n_strategy::<T>(&mut project, s);
-    }: update_project(RawOrigin::Signed(relayer.clone()), 1, project.clone())
+    }: update_project(RawOrigin::Signed(relayer.clone()), 1, project.clone(), Some(generate_workspace_n_strategy::<T>(s)))
     verify {
         assert_eq!(DAOPortal::<T>::projects(1).unwrap(), project);
     }

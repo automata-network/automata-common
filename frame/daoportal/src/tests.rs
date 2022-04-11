@@ -51,8 +51,9 @@ fn direct_project_manipulation() {
                     proposers: None,
                 },
                 data: IpfsHash::default(),
-                workspaces: vec![valid_workspace.clone()]
-            }
+                workspace: 0
+            },
+            vec![valid_workspace.clone()]
         ));
         // Empty workspace applied to project
         assert_noop!(
@@ -66,8 +67,9 @@ fn direct_project_manipulation() {
                         proposers: None,
                     },
                     data: IpfsHash::default(),
-                    workspaces: Vec::new()
-                }
+                    workspace: 0
+                },
+                Vec::new()
             ),
             Error::<Test>::InvalidProject
         );
@@ -83,11 +85,12 @@ fn direct_project_manipulation() {
                         proposers: None,
                     },
                     data: IpfsHash::default(),
-                    workspaces: vec![Workspace {
-                        _chain: 1,
-                        strategies: Vec::new()
-                    }]
-                }
+                    workspace: 0
+                },
+                vec![Workspace {
+                    _chain: 1,
+                    strategies: Vec::new()
+                }]
             ),
             Error::<Test>::InvalidWorkspace
         );
@@ -103,13 +106,14 @@ fn direct_project_manipulation() {
                         proposers: None,
                     },
                     data: IpfsHash::default(),
-                    workspaces: vec![Workspace {
-                        _chain: 2,
-                        strategies: vec![Strategy::Solidity(SolidityStrategy::ERC20Balance(
-                            EthAddress::default()
-                        ))]
-                    }]
-                }
+                    workspace: 0
+                },
+                vec![Workspace {
+                    _chain: 2,
+                    strategies: vec![Strategy::Solidity(SolidityStrategy::ERC20Balance(
+                        EthAddress::default()
+                    ))]
+                }]
             ),
             Error::<Test>::InvalidStrategy
         );
@@ -124,8 +128,9 @@ fn direct_project_manipulation() {
                         proposers: None,
                     },
                     data: IpfsHash::default(),
-                    workspaces: vec![valid_workspace.clone(), valid_workspace.clone()]
-                }
+                    workspace: 0
+                },
+                vec![valid_workspace.clone(), valid_workspace.clone()]
             ),
             Error::<Test>::DuplicateWorkspace
         );
@@ -144,8 +149,9 @@ fn direct_project_manipulation() {
                     proposers: None,
                 },
                 data: IpfsHash::default(),
-                workspaces: vec![valid_workspace.clone()]
-            }
+                workspace: 0
+            },
+            Some(vec![valid_workspace.clone()])
         ));
         // using same sender after changing owner
         assert_noop!(
@@ -160,8 +166,9 @@ fn direct_project_manipulation() {
                         proposers: None,
                     },
                     data: IpfsHash::default(),
-                    workspaces: vec![valid_workspace.clone()]
-                }
+                    workspace: 0
+                },
+                Some(vec![valid_workspace.clone()])
             ),
             Error::<Test>::InvalidSenderOrigin
         );
@@ -177,8 +184,9 @@ fn direct_project_manipulation() {
                     proposers: None,
                 },
                 data: IpfsHash::default(),
-                workspaces: vec![valid_workspace]
-            }
+                workspace: 0
+            },
+            Some(vec![valid_workspace])
         ));
     });
 }
@@ -203,8 +211,9 @@ fn relay_project_manipulation() {
                     proposers: None,
                 },
                 data: IpfsHash::default(),
-                workspaces: vec![valid_workspace.clone()]
-            }
+                workspace: 0
+            },
+            vec![valid_workspace.clone()]
         ));
         assert_eq!(DAOPortal::latest_project_id(), 1);
 
@@ -222,8 +231,9 @@ fn relay_project_manipulation() {
                         proposers: None,
                     },
                     data: IpfsHash::default(),
-                    workspaces: vec![valid_workspace.clone()]
-                }
+                    workspace: 0
+                },
+                Some(vec![valid_workspace.clone()])
             ),
             Error::<Test>::InvalidSenderOrigin
         );
@@ -239,8 +249,9 @@ fn relay_project_manipulation() {
                     proposers: None,
                 },
                 data: IpfsHash::default(),
-                workspaces: vec![valid_workspace.clone()]
-            }
+                workspace: 0
+            },
+            Some(vec![valid_workspace.clone()])
         ));
         // Using the native a user to update again
         assert_ok!(DAOPortal::update_project(
@@ -254,8 +265,9 @@ fn relay_project_manipulation() {
                     proposers: None,
                 },
                 data: IpfsHash::default(),
-                workspaces: vec![valid_workspace.clone()]
-            }
+                workspace: 0
+            },
+            Some(vec![valid_workspace.clone()])
         ));
     });
 }
@@ -276,7 +288,7 @@ fn direct_add_proposal() {
                 _start: 2000,
                 _end: 5000,
                 _frequency: None,
-                _workspaces: Vec::new(),
+                _workspace: 0,
                 state: DAOProposalState::default()
             }
         ));
@@ -304,7 +316,7 @@ fn direct_add_proposal() {
                 _start: 1000,
                 _end: 5000,
                 _frequency: None,
-                _workspaces: Vec::new(),
+                _workspace: 0,
                 state: DAOProposalState::default()
             }
         ));
@@ -326,7 +338,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
-                    _workspaces: Vec::new(),
+                    _workspace: 0,
                     state: DAOProposalState::default()
                 }
             ),
@@ -347,7 +359,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
-                    _workspaces: Vec::new(),
+                    _workspace: 0,
                     state: DAOProposalState::default()
                 }
             ),
@@ -368,7 +380,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 2500,
                     _frequency: None,
-                    _workspaces: Vec::new(),
+                    _workspace: 0,
                     state: DAOProposalState::default()
                 }
             ),
@@ -389,7 +401,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 12001,
                     _frequency: None,
-                    _workspaces: Vec::new(),
+                    _workspace: 0,
                     state: DAOProposalState::default()
                 }
             ),
@@ -410,7 +422,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
-                    _workspaces: Vec::new(),
+                    _workspace: 0,
                     state: DAOProposalState::default()
                 }
             ),
@@ -434,7 +446,7 @@ fn direct_add_proposal() {
                     _start: 2000,
                     _end: 5000,
                     _frequency: Some(1000),
-                    _workspaces: Vec::new(),
+                    _workspace: 0,
                     state: DAOProposalState::default()
                 }
             ),
@@ -461,7 +473,7 @@ fn direct_add_proposal() {
                 _start: 2000,
                 _end: 5000,
                 _frequency: Some(1000),
-                _workspaces: Vec::new(),
+                _workspace: 0,
                 state: DAOProposalState::default()
             }
         ));
@@ -487,7 +499,7 @@ fn relay_add_proposal() {
                 _start: 2000,
                 _end: 5000,
                 _frequency: Some(1),
-                _workspaces: Vec::new(),
+                _workspace: 0,
                 state: DAOProposalState::default()
             }
         ));

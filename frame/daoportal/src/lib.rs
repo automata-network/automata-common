@@ -75,6 +75,10 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, ProjectId, Project<T::AccountId>>;
 
     #[pallet::storage]
+    #[pallet::getter(fn workspaces)]
+    pub type Workspaces<T: Config> = StorageDoubleMap<_, Blake2_128Concat, ProjectId, Blake2_128Concat, WorkspaceRev, Vec<Workspace>>;
+
+    #[pallet::storage]
     #[pallet::getter(fn latest_proposal_id)]
     pub type LatestProposalId<T: Config> =
         StorageMap<_, Blake2_128Concat, ProjectId, ProposalId, ValueQuery>;
@@ -193,14 +197,17 @@ pub mod pallet {
         }
 
         #[pallet::weight(
-			T::DAOPortalWeightInfo::add_project(&project.workspaces)
+			T::DAOPortalWeightInfo::add_project(&workspaces)
 		)]
         pub fn add_project(
             _origin: OriginFor<T>,
-            project: Project<T::AccountId>,
+            mut project: Project<T::AccountId>,
+            workspaces: Vec<Workspace>,
         ) -> DispatchResultWithPostInfo {
             let project_id = Self::latest_project_id().saturating_add(1);
-            Self::check_workspace(&project)?;
+            Self::check_workspace(&workspaces)?;
+            Workspaces::<T>::insert(project_id, 1, workspaces);
+            project.workspace = 1;
             Projects::<T>::insert(project_id, project);
             LatestProjectId::<T>::put(project_id);
 
@@ -210,12 +217,13 @@ pub mod pallet {
         }
 
         #[pallet::weight(
-			T::DAOPortalWeightInfo::update_project_direct(&project.workspaces).max(T::DAOPortalWeightInfo::update_project_relay(&project.workspaces))
+			T::DAOPortalWeightInfo::update_project_direct(&workspaces).max(T::DAOPortalWeightInfo::update_project_relay(&workspaces))
 		)]
         pub fn update_project(
             origin: OriginFor<T>,
             project_id: ProjectId,
-            project: Project<T::AccountId>,
+            mut project: Project<T::AccountId>,
+            workspaces: Option<Vec<Workspace>>
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -233,7 +241,12 @@ pub mod pallet {
                         );
                     }
 
-                    Self::check_workspace(&project)?;
+                    if let Some(ws) = workspaces {
+                        Self::check_workspace(&ws)?;
+
+                        Workspaces::<T>::insert(project_id, p.workspace.saturating_add(1), ws);
+                        project.workspace = p.workspace.saturating_add(1);
+                    }
 
                     *p = project;
 
@@ -311,9 +324,9 @@ pub mod pallet {
                 )?;
             }
 
-            proposal._workspaces = Self::projects(project_id)
+            proposal._workspace = Self::projects(project_id)
                 .ok_or(Error::<T>::InvalidProject)?
-                .workspaces
+                .workspace
                 .clone();
 
             proposal.state = DAOProposalState {
@@ -415,10 +428,15 @@ pub mod pallet {
             );
             Proposals::<T>::try_mutate(project_id, proposal_id, |proposal| -> DispatchResult {
                 if let Some(ref mut proposal) = proposal {
-                    ensure!(
-                        snapshots.len() == proposal._workspaces.len(),
-                        Error::<T>::InvalidSnapshots
-                    );
+                    if let Some(ws) = Self::workspaces(project_id, proposal._workspace) {
+                        ensure!(
+                            snapshots.len() == ws.len(),
+                            Error::<T>::InvalidSnapshots
+                        );
+                    } else {
+                        return Err(Error::<T>::InvalidSnapshots.into());
+                    }
+
                     if proposal.state.finalized {
                         return Err(Error::<T>::InvalidStatus.into());
                     } else {
@@ -466,23 +484,23 @@ pub mod pallet {
             <Proposals<T>>::iter().collect()
         }
 
-        fn check_workspace(project: &Project<T::AccountId>) -> DispatchResult {
+        fn check_workspace(workspaces: &Vec<Workspace>) -> DispatchResult {
             let mut chain_index = 0;
 
-            ensure!(&project.workspaces.len() > &0, Error::<T>::InvalidProject);
+            ensure!(&workspaces.len() > &0, Error::<T>::InvalidProject);
 
-            let mut workspaces = BTreeSet::<ChainIndex>::new();
+            let mut workspaces_set = BTreeSet::<ChainIndex>::new();
 
-            for workspace in &project.workspaces {
+            for workspace in workspaces {
                 if chain_index == 0 {
                     chain_index = Self::latest_chain_index();
                 }
                 ensure!(workspace._chain <= chain_index, Error::<T>::InvalidChain);
                 ensure!(
-                    !workspaces.contains(&workspace._chain),
+                    !workspaces_set.contains(&workspace._chain),
                     Error::<T>::DuplicateWorkspace
                 );
-                workspaces.insert(workspace._chain.clone());
+                workspaces_set.insert(workspace._chain.clone());
                 let mut strategy_count = 0;
                 match Self::chains(workspace._chain) {
                     Some(c) => match c._protocol {
@@ -495,7 +513,7 @@ pub mod pallet {
                                         Error::<T>::DuplicateStrategy
                                     );
                                     strategies.insert(strategy.clone());
-                                    strategy_count = strategy_count.saturating_add(1);
+                                    strategy_count = strategy_count.saturating_add(1u32);
                                 } else {
                                     return Err(Error::<T>::InvalidStrategy.into());
                                 }

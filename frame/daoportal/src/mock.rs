@@ -178,8 +178,9 @@ impl ExtBuilder {
                         proposers: None,
                     },
                     data: IpfsHash::default(),
-                    workspaces: vec![valid_workspace.clone()]
-                }
+                    workspace: 0
+                },
+                vec![valid_workspace.clone()]
             ));
             assert_eq!(DAOPortal::latest_project_id(), 1);
         });
@@ -201,7 +202,7 @@ impl ExtBuilder {
                     _start: 2000,
                     _end: 5000,
                     _frequency: Some(1000),
-                    _workspaces: Vec::new(),
+                    _workspace: 0,
                     state: DAOProposalState::default()
                 }
             ));
@@ -217,7 +218,7 @@ impl ExtBuilder {
                     _start: 2000,
                     _end: 5000,
                     _frequency: Some(1000),
-                    _workspaces: Vec::new(),
+                    _workspace: 0,
                     state: DAOProposalState::default()
                 }
             ));
@@ -233,7 +234,7 @@ impl ExtBuilder {
                     _start: 2000,
                     _end: 5000,
                     _frequency: None,
-                    _workspaces: Vec::new(),
+                    _workspace: 0,
                     state: DAOProposalState::default()
                 }
             ));

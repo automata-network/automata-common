@@ -18,6 +18,7 @@ pub type OptionIndex = u8;
 pub type VotingPower = U256;
 pub type IpfsHash = Vec<u8>;
 pub type EthAddress = H160;
+pub type WorkspaceRev = u32;
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -74,7 +75,8 @@ pub struct Project<AccountId> {
     // pub owner: CrossChainAccount<AccountId>,
     pub usergroup: UserGroup<AccountId>,
     pub data: IpfsHash,
-    pub workspaces: Vec<Workspace>,
+    pub workspace: WorkspaceRev,
+    // pub workspaces: Vec<Workspace>,
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -101,7 +103,7 @@ pub struct DAOProposal<AccountId> {
     pub _start: u64,
     pub _end: u64,
     pub _frequency: Option<u64>,
-    pub _workspaces: Vec<Workspace>,
+    pub _workspace: WorkspaceRev,
     pub state: DAOProposalState,
 }
 
