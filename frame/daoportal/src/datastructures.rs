@@ -44,7 +44,7 @@ pub enum Strategy {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Ord, PartialOrd)]
 pub enum SolidityStrategy {
     ERC20Balance(EthAddress),
-    Cusmtom(IpfsHash, Vec<u8>),
+    Custom(IpfsHash, Vec<u8>),
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
