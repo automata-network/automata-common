@@ -3739,6 +3739,7 @@ dependencies = [
  "pallet-daoportal",
  "pallet-economics",
  "pallet-game",
+ "pallet-gmetadata",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
@@ -4099,6 +4100,24 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "serde_json",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-gmetadata"
+version = "0.1.0"
+dependencies = [
+ "automata-primitives",
+ "blake2",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",

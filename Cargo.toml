@@ -11,6 +11,7 @@ members = [
     "frame/vesting",
     "frame/economics",
     "frame/game",
+    "frame/gmetadata",
     "primitives",
     "node-template/node",
     "node-template/pallets/template",
