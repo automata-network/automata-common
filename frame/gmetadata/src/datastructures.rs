@@ -1,6 +1,9 @@
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 use sp_std::prelude::*;
 
 pub type GmetadataNamespaceName = Vec<u8>;
@@ -24,6 +27,7 @@ pub struct GmetadataIndexInfo {
     pub update_time: u64,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct GmetadataKey {
     pub ns: u64,        // namespace id
@@ -31,6 +35,7 @@ pub struct GmetadataKey {
     pub pk: Vec<u8>,    // primary key
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Default, PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct GmetadataQueryResult {
     pub list: Vec<Vec<u8>>,
