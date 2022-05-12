@@ -72,7 +72,6 @@ fn bad_origin() {
             DispatchError::BadOrigin
         );
         assert_ok!(Gmetadata::remove_index(u1.into(), key.clone(), "1".into()));
-
     });
 }
 
@@ -236,21 +235,21 @@ fn test_query() {
         key.pk = "".into();
         assert_eq!(
             Gmetadata::query_with_index(key.clone(), key.clone(), None, 10),
-            GmetadataQueryResult{
+            GmetadataQueryResult {
                 list: vec!["network1".into(), "network2".into()],
                 cursor: "".into(),
             }
         );
         assert_eq!(
             Gmetadata::query_with_index(key.clone(), key.clone(), None, 1),
-            GmetadataQueryResult{
+            GmetadataQueryResult {
                 list: vec!["network1".into()],
                 cursor: "1".into(),
             }
         );
         assert_eq!(
             Gmetadata::query_with_index(key.clone(), key.clone(), Some("1".into()), 1),
-            GmetadataQueryResult{
+            GmetadataQueryResult {
                 list: vec!["network2".into()],
                 cursor: "".into(),
             }

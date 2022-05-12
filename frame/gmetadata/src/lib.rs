@@ -137,7 +137,10 @@ pub mod pallet {
         }
 
         #[pallet::weight(0)]
-        pub fn batch_write(origin: OriginFor<T>, ops: Vec<GmetadataWriteOp>) -> DispatchResultWithPostInfo {
+        pub fn batch_write(
+            origin: OriginFor<T>,
+            ops: Vec<GmetadataWriteOp>,
+        ) -> DispatchResultWithPostInfo {
             for op in ops {
                 match op {
                     GmetadataWriteOp::SetValue(key, value) => {
@@ -146,10 +149,10 @@ pub mod pallet {
                     GmetadataWriteOp::RemoveValue(key) => {
                         Self::remove_value(origin.clone(), key)?;
                     }
-                    GmetadataWriteOp::AddIndex(key , value) => {
+                    GmetadataWriteOp::AddIndex(key, value) => {
                         Self::add_index(origin.clone(), key, value)?;
                     }
-                    GmetadataWriteOp::RemoveIndex(key , value) => {
+                    GmetadataWriteOp::RemoveIndex(key, value) => {
                         Self::remove_index(origin.clone(), key, value)?;
                     }
                 }
