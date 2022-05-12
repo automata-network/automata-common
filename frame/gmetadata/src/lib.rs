@@ -197,7 +197,7 @@ pub mod pallet {
                 None => IndexStore::<T>::insert(
                     key,
                     GmetadataIndexInfo {
-                        data: vec![value],
+                        data: sp_std::vec![value],
                         update_time: 0,
                     },
                 ),
