@@ -271,8 +271,8 @@ pub mod pallet {
         pub fn query_with_index(
             index_key: GmetadataKey,
             mut value_key: GmetadataKey,
-            start: Option<Vec<u8>>,
-            limit: usize,
+            start: Vec<u8>,
+            limit: u64,
         ) -> GmetadataQueryResult {
             match Self::get_index(index_key) {
                 Some(index_info) => {
@@ -281,16 +281,11 @@ pub mod pallet {
                     let mut skip = true;
                     for key in &index_info.data {
                         if skip {
-                            match &start {
-                                Some(n) => {
-                                    if n.len() == 0 {
-                                        skip = false;
-                                    } else if key.eq(n) {
-                                        skip = false;
-                                        continue;
-                                    }
-                                }
-                                None => skip = false,
+                            if start.len() == 0 {
+                                skip = false;
+                            } else if key.eq(&start) {
+                                skip = false;
+                                continue;
                             }
                         }
                         if skip {
@@ -300,7 +295,7 @@ pub mod pallet {
                         match Self::get_value(value_key.clone()) {
                             Some(val) => {
                                 result.push(val.data);
-                                if result.len() >= limit {
+                                if result.len() >= limit as _ {
                                     if Some(key) != index_info.data.last() {
                                         cursor = Some(key.clone());
                                     }
