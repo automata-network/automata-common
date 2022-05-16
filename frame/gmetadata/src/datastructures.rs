@@ -16,7 +16,7 @@ pub struct HexBytes(Vec<u8>);
 #[derive(Default, PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct HexBytes(Vec<u8>);
 
-impl std::ops::Deref for HexBytes {
+impl sp_std::ops::Deref for HexBytes {
     type Target = Vec<u8>;
     fn deref(&self) -> &Self::Target {
         &self.0
