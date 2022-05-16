@@ -271,7 +271,7 @@ pub mod pallet {
         pub fn query_with_index(
             index_key: GmetadataKey,
             mut value_key: GmetadataKey,
-            start: Vec<u8>,
+            start: HexBytes,
             limit: u64,
         ) -> GmetadataQueryResult {
             match Self::get_index(index_key) {
@@ -283,7 +283,7 @@ pub mod pallet {
                         if skip {
                             if start.len() == 0 {
                                 skip = false;
-                            } else if key.eq(&start) {
+                            } else if start.eq(key) {
                                 skip = false;
                                 continue;
                             }

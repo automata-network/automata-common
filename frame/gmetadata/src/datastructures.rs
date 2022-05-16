@@ -16,6 +16,25 @@ pub struct HexBytes(Vec<u8>);
 #[derive(Default, PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct HexBytes(Vec<u8>);
 
+impl std::ops::Deref for HexBytes {
+    type Target = Vec<u8>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl PartialEq<[u8]> for HexBytes {
+    fn eq(&self, other: &[u8]) -> bool {
+        self.0.eq(other)
+    }
+}
+
+impl PartialEq<Vec<u8>> for HexBytes {
+    fn eq(&self, other: &Vec<u8>) -> bool {
+        self.0.eq(other)
+    }
+}
+
 impl From<&str> for HexBytes {
     fn from(val: &str) -> HexBytes {
         Self(val.into())
