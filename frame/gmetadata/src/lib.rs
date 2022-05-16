@@ -291,13 +291,13 @@ pub mod pallet {
                         if skip {
                             continue;
                         }
-                        value_key.pk = key.clone();
+                        value_key.pk = key.clone().into();
                         match Self::get_value(value_key.clone()) {
                             Some(val) => {
-                                result.push(val.data);
+                                result.push(val.data.into());
                                 if result.len() >= limit as _ {
                                     if Some(key) != index_info.data.last() {
-                                        cursor = Some(key.clone());
+                                        cursor = Some(key.clone().into());
                                     }
                                     break;
                                 }
@@ -307,11 +307,11 @@ pub mod pallet {
                     }
                     let cursor = match cursor {
                         Some(cursor) => cursor,
-                        None => Vec::new(),
+                        None => HexBytes::new(),
                     };
                     GmetadataQueryResult {
                         list: result,
-                        cursor,
+                        cursor: cursor.into(),
                     }
                 }
                 None => GmetadataQueryResult::default(),

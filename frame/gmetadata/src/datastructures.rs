@@ -2,11 +2,74 @@ use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 
 #[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
+use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 
 use sp_std::prelude::*;
 
 pub type GmetadataNamespaceName = Vec<u8>;
+
+#[cfg(feature = "std")]
+#[derive(Default, PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct HexBytes(Vec<u8>);
+
+#[cfg(not(feature = "std"))]
+#[derive(Default, PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct HexBytes(Vec<u8>);
+
+impl From<&str> for HexBytes {
+    fn from(val: &str) -> HexBytes {
+        Self(val.into())
+    }
+}
+
+impl HexBytes {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl From<Vec<u8>> for HexBytes {
+    fn from(val: Vec<u8>) -> HexBytes {
+        Self(val.into())
+    }
+}
+
+impl From<&[u8]> for HexBytes {
+    fn from(val: &[u8]) -> HexBytes {
+        Self(val.into())
+    }
+}
+
+impl From<HexBytes> for Vec<u8> {
+    fn from(val: HexBytes) -> Vec<u8> {
+        val.0
+    }
+}
+
+impl<'de> Deserialize<'de> for HexBytes {
+    fn deserialize<D>(deserializer: D) -> Result<HexBytes, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let str = String::deserialize(deserializer)?;
+        let result: Vec<u8> = if str.starts_with("0x") {
+            hex::decode(&str[2..]).map_err(|e| D::Error::custom(format!("{}", e)))?
+        } else {
+            str.into()
+        };
+        Ok(result.into())
+    }
+}
+
+impl Serialize for HexBytes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let val = format!("0x{}", hex::encode(&self.0));
+        serializer.serialize_str(&val)
+    }
+}
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct GmetadataNamespaceInfo<AccountId> {
@@ -30,18 +93,18 @@ pub struct GmetadataIndexInfo {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct GmetadataKey {
-    pub ns: u64,        // namespace id
-    pub table: Vec<u8>, // table name
-    pub pk: Vec<u8>,    // primary key
+    pub ns: u64,         // namespace id
+    pub table: HexBytes, // table name
+    pub pk: HexBytes,    // primary key
 }
 
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Default, PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct GmetadataQueryResult {
-    pub list: Vec<Vec<u8>>,
+    pub list: Vec<HexBytes>,
 
     // cursor for fetch next batch, empty means reach the end
-    pub cursor: Vec<u8>,
+    pub cursor: HexBytes,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]

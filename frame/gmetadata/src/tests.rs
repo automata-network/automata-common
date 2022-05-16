@@ -234,21 +234,21 @@ fn test_query() {
         ));
         key.pk = "".into();
         assert_eq!(
-            Gmetadata::query_with_index(key.clone(), key.clone(), None, 10),
+            Gmetadata::query_with_index(key.clone(), key.clone(), "".into(), 10),
             GmetadataQueryResult {
                 list: vec!["network1".into(), "network2".into()],
                 cursor: "".into(),
             }
         );
         assert_eq!(
-            Gmetadata::query_with_index(key.clone(), key.clone(), None, 1),
+            Gmetadata::query_with_index(key.clone(), key.clone(), "".into(), 1),
             GmetadataQueryResult {
                 list: vec!["network1".into()],
                 cursor: "1".into(),
             }
         );
         assert_eq!(
-            Gmetadata::query_with_index(key.clone(), key.clone(), Some("1".into()), 1),
+            Gmetadata::query_with_index(key.clone(), key.clone(), "1".into(), 1),
             GmetadataQueryResult {
                 list: vec!["network2".into()],
                 cursor: "".into(),
