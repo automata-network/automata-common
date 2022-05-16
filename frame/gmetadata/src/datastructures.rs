@@ -46,6 +46,7 @@ impl From<HexBytes> for Vec<u8> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for HexBytes {
     fn deserialize<D>(deserializer: D) -> Result<HexBytes, D::Error>
     where
@@ -61,6 +62,7 @@ impl<'de> Deserialize<'de> for HexBytes {
     }
 }
 
+#[cfg(feature = "std")]
 impl Serialize for HexBytes {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
