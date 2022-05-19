@@ -1,15 +1,54 @@
 use crate::mock::{ExtBuilder, Gmetadata, System, Test};
 use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
+use sp_core::H256;
 
 use super::datastructures::*;
 use super::*;
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
+#[test]
+fn test_query_with_index() {
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+    #[derive(codec::Encode)]
+    struct Arg {
+        index_key: GmetadataKey,
+        value_key: GmetadataKey,
+        cursor: HexBytes,
+        limit: u64,
+    }
+
+    let arg = Arg {
+        index_key: GmetadataKey {
+            ns: 1,
+            table: "network".into(),
+            pk: "".into(),
+        },
+        value_key: GmetadataKey {
+            ns: 1,
+            table: "network".into(),
+            pk: "".into(),
+        },
+        cursor: "".into(),
+        limit: 10,
+    };
+    let value = serde_json::value::Value::Array(vec![
+        serde_json::to_value(&arg.index_key).unwrap(),
+        serde_json::to_value(&arg.value_key).unwrap(),
+        serde_json::to_value(&arg.cursor).unwrap(),
+        serde_json::to_value(&arg.limit).unwrap(),
+    ]);
+    println!("{}", serde_json::to_string(&value).unwrap());
+}
 
 #[test]
 fn bad_origin() {
     use sp_runtime::DispatchError;
 
     ExtBuilder::default().build().execute_with(|| {
+        let mut req_id = H256::default();
         let u1 = Some(1);
         let u2 = Some(2);
         assert_noop!(
@@ -52,26 +91,41 @@ fn bad_origin() {
             pk: "".into(),
         };
         assert_noop!(
-            Gmetadata::set_value(u2.into(), key.clone(), "1".into()),
+            Gmetadata::set_value(u2.into(), key.clone(), "1".into(), req_id),
             DispatchError::BadOrigin
         );
-        assert_ok!(Gmetadata::set_value(u1.into(), key.clone(), "1".into()));
+        assert_ok!(Gmetadata::set_value(
+            u1.into(),
+            key.clone(),
+            "1".into(),
+            req_id
+        ));
         assert_noop!(
-            Gmetadata::remove_value(u2.into(), key.clone()),
+            Gmetadata::remove_value(u2.into(), key.clone(), req_id),
             DispatchError::BadOrigin
         );
-        assert_ok!(Gmetadata::remove_value(u1.into(), key.clone()));
+        assert_ok!(Gmetadata::remove_value(u1.into(), key.clone(), req_id));
 
         assert_noop!(
-            Gmetadata::add_index(u2.into(), key.clone(), "1".into()),
+            Gmetadata::add_index(u2.into(), key.clone(), "1".into(), req_id),
             DispatchError::BadOrigin
         );
-        assert_ok!(Gmetadata::add_index(u1.into(), key.clone(), "1".into()));
+        assert_ok!(Gmetadata::add_index(
+            u1.into(),
+            key.clone(),
+            "1".into(),
+            req_id
+        ));
         assert_noop!(
-            Gmetadata::remove_index(u2.into(), key.clone(), "1".into()),
+            Gmetadata::remove_index(u2.into(), key.clone(), "1".into(), req_id),
             DispatchError::BadOrigin
         );
-        assert_ok!(Gmetadata::remove_index(u1.into(), key.clone(), "1".into()));
+        assert_ok!(Gmetadata::remove_index(
+            u1.into(),
+            key.clone(),
+            "1".into(),
+            req_id
+        ));
     });
 }
 
@@ -113,6 +167,7 @@ fn test_namespace() {
 #[test]
 fn test_value() {
     ExtBuilder::default().build().execute_with(|| {
+        let mut req_id = H256::default();
         assert_ok!(Gmetadata::create_namespace(
             RawOrigin::Root.into(),
             "ns1".into()
@@ -125,7 +180,7 @@ fn test_value() {
         let value = r#"{"id":"1"}"#.as_bytes();
         let u1 = Some(1);
         assert_noop!(
-            Gmetadata::set_value(u1.into(), key.clone(), r#"{"id":"1"}"#.into()),
+            Gmetadata::set_value(u1.into(), key.clone(), r#"{"id":"1"}"#.into(), req_id),
             Error::<Test>::NamespaceNotFound
         );
         key.ns = 1;
@@ -137,7 +192,12 @@ fn test_value() {
             1,
             u1.unwrap()
         ));
-        assert_ok!(Gmetadata::set_value(u1.into(), key.clone(), value.into()));
+        assert_ok!(Gmetadata::set_value(
+            u1.into(),
+            key.clone(),
+            value.into(),
+            req_id
+        ));
         assert_eq!(
             Gmetadata::get_value(key.clone()),
             Some(GmetadataValueInfo {
@@ -145,7 +205,7 @@ fn test_value() {
                 update_time: 0,
             })
         );
-        assert_ok!(Gmetadata::remove_value(u1.into(), key.clone()));
+        assert_ok!(Gmetadata::remove_value(u1.into(), key.clone(), req_id));
         assert_eq!(Gmetadata::get_value(key.clone()), None);
     });
 }
@@ -153,6 +213,8 @@ fn test_value() {
 #[test]
 fn test_index() {
     ExtBuilder::default().build().execute_with(|| {
+        let mut req_id = H256::default();
+
         assert_ok!(Gmetadata::create_namespace(
             RawOrigin::Root.into(),
             "ns1".into()
@@ -164,7 +226,7 @@ fn test_index() {
             pk: "".into(),
         };
         assert_noop!(
-            Gmetadata::add_index(u1.into(), key.clone(), "1".into()),
+            Gmetadata::add_index(u1.into(), key.clone(), "1".into(), req_id),
             Error::<Test>::NamespaceNotFound
         );
         key.ns = 1;
@@ -173,9 +235,24 @@ fn test_index() {
             1,
             u1.unwrap()
         ));
-        assert_ok!(Gmetadata::add_index(u1.into(), key.clone(), "1".into()));
-        assert_ok!(Gmetadata::add_index(u1.into(), key.clone(), "3".into()));
-        assert_ok!(Gmetadata::add_index(u1.into(), key.clone(), "2".into()));
+        assert_ok!(Gmetadata::add_index(
+            u1.into(),
+            key.clone(),
+            "1".into(),
+            req_id
+        ));
+        assert_ok!(Gmetadata::add_index(
+            u1.into(),
+            key.clone(),
+            "3".into(),
+            req_id
+        ));
+        assert_ok!(Gmetadata::add_index(
+            u1.into(),
+            key.clone(),
+            "2".into(),
+            req_id
+        ));
         assert_eq!(
             Gmetadata::get_index(key.clone()),
             Some(GmetadataIndexInfo {
@@ -185,11 +262,16 @@ fn test_index() {
         );
         key.ns = 0;
         assert_noop!(
-            Gmetadata::remove_index(u1.into(), key.clone(), "1".into()),
+            Gmetadata::remove_index(u1.into(), key.clone(), "1".into(), req_id),
             Error::<Test>::NamespaceNotFound
         );
         key.ns = 1;
-        assert_ok!(Gmetadata::remove_index(u1.into(), key.clone(), "1".into()));
+        assert_ok!(Gmetadata::remove_index(
+            u1.into(),
+            key.clone(),
+            "1".into(),
+            req_id
+        ));
         assert_eq!(
             Gmetadata::get_index(key.clone()),
             Some(GmetadataIndexInfo {
@@ -218,19 +300,33 @@ fn test_query() {
             table: "network".into(),
             pk: "".into(),
         };
-        assert_ok!(Gmetadata::add_index(u1.into(), key.clone(), "1".into()));
-        assert_ok!(Gmetadata::add_index(u1.into(), key.clone(), "2".into()));
+        let mut req_id = H256::default();
+
+        assert_ok!(Gmetadata::add_index(
+            u1.into(),
+            key.clone(),
+            "1".into(),
+            req_id
+        ));
+        assert_ok!(Gmetadata::add_index(
+            u1.into(),
+            key.clone(),
+            "2".into(),
+            req_id
+        ));
         key.pk = "1".into();
         assert_ok!(Gmetadata::set_value(
             u1.into(),
             key.clone(),
-            "network1".into()
+            "network1".into(),
+            req_id
         ));
         key.pk = "2".into();
         assert_ok!(Gmetadata::set_value(
             u1.into(),
             key.clone(),
-            "network2".into()
+            "network2".into(),
+            req_id
         ));
         key.pk = "".into();
         assert_eq!(

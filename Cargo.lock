@@ -4117,6 +4117,7 @@ dependencies = [
  "frame-system",
  "hex",
  "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "serde",
  "serde_json",

@@ -19,8 +19,19 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Gmetadata: pallet_gmetadata::{Pallet, Call, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
     }
 );
+
+parameter_types! {
+    pub const MinimumPeriod: u64 = 5;
+}
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -55,6 +66,7 @@ impl frame_system::Config for Test {
 
 impl Config for Test {
     type Event = Event;
+    type UnixTime = Timestamp;
 }
 
 pub struct ExtBuilder {}

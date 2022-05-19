@@ -332,6 +332,7 @@ impl pallet_daoportal::Config for Runtime {
 
 impl pallet_gmetadata::Config for Runtime {
     type Event = Event;
+    type UnixTime = Timestamp;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

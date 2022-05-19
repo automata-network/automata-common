@@ -12,13 +12,16 @@ mod tests;
 pub mod pallet {
 
     use crate::datastructures::*;
-    use frame_support::{ensure, pallet_prelude::*, traits::Get};
+    use frame_support::{pallet_prelude::*, traits::UnixTime};
     use frame_system::pallet_prelude::*;
+    use sp_core::H256;
+    use sp_runtime::SaturatedConversion;
     use sp_std::prelude::*;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type UnixTime: UnixTime;
     }
 
     #[pallet::pallet]
@@ -50,7 +53,15 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, GmetadataKey, GmetadataIndexInfo>;
 
     #[pallet::event]
-    pub enum Event<T: Config> {}
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        StateUpdate(
+            /*req_id*/ H256,
+            /*namespace*/ u64,
+            /*table*/ Vec<u8>,
+            /*pk*/ Vec<u8>,
+        ),
+    }
 
     #[pallet::error]
     pub enum Error<T> {
@@ -140,20 +151,21 @@ pub mod pallet {
         pub fn batch_write(
             origin: OriginFor<T>,
             ops: Vec<GmetadataWriteOp>,
+            req_id: H256,
         ) -> DispatchResultWithPostInfo {
             for op in ops {
                 match op {
                     GmetadataWriteOp::SetValue(key, value) => {
-                        Self::set_value(origin.clone(), key, value)?;
+                        Self::set_value(origin.clone(), key, value, req_id)?;
                     }
                     GmetadataWriteOp::RemoveValue(key) => {
-                        Self::remove_value(origin.clone(), key)?;
+                        Self::remove_value(origin.clone(), key, req_id)?;
                     }
                     GmetadataWriteOp::AddIndex(key, value) => {
-                        Self::add_index(origin.clone(), key, value)?;
+                        Self::add_index(origin.clone(), key, value, req_id)?;
                     }
                     GmetadataWriteOp::RemoveIndex(key, value) => {
-                        Self::remove_index(origin.clone(), key, value)?;
+                        Self::remove_index(origin.clone(), key, value, req_id)?;
                     }
                 }
             }
@@ -165,15 +177,22 @@ pub mod pallet {
             origin: OriginFor<T>,
             key: GmetadataKey,
             value: Vec<u8>,
+            req_id: H256,
         ) -> DispatchResultWithPostInfo {
             Self::check_namespace(origin, key.ns)?;
             ValueStore::<T>::insert(
-                key,
+                key.clone(),
                 GmetadataValueInfo {
                     data: value,
-                    update_time: 0,
+                    update_time: T::UnixTime::now().as_millis().saturated_into::<u64>(),
                 },
             );
+            Self::deposit_event(Event::StateUpdate(
+                req_id,
+                key.ns,
+                key.table.into(),
+                key.pk.into(),
+            ));
             Ok(().into())
         }
 
@@ -182,6 +201,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             key: GmetadataKey,
             value: Vec<u8>,
+            req_id: H256,
         ) -> DispatchResultWithPostInfo {
             Self::check_namespace(origin, key.ns)?;
             let mut old_value = IndexStore::<T>::get(&key);
@@ -190,25 +210,42 @@ pub mod pallet {
                     if !old_value.data.contains(&value) {
                         old_value.data.push(value);
                         old_value.data.sort();
-                        old_value.update_time = 0;
-                        IndexStore::<T>::insert(key, old_value);
+                        old_value.update_time =
+                            T::UnixTime::now().as_millis().saturated_into::<u64>();
+                        IndexStore::<T>::insert(key.clone(), old_value);
                     }
                 }
                 None => IndexStore::<T>::insert(
-                    key,
+                    key.clone(),
                     GmetadataIndexInfo {
                         data: sp_std::vec![value],
-                        update_time: 0,
+                        update_time: T::UnixTime::now().as_millis().saturated_into::<u64>(),
                     },
                 ),
             }
+            Self::deposit_event(Event::StateUpdate(
+                req_id,
+                key.ns,
+                key.table.into(),
+                key.pk.into(),
+            ));
             Ok(().into())
         }
 
         #[pallet::weight(0)]
-        pub fn remove_value(origin: OriginFor<T>, key: GmetadataKey) -> DispatchResultWithPostInfo {
+        pub fn remove_value(
+            origin: OriginFor<T>,
+            key: GmetadataKey,
+            req_id: H256,
+        ) -> DispatchResultWithPostInfo {
             Self::check_namespace(origin, key.ns)?;
-            ValueStore::<T>::remove(key);
+            ValueStore::<T>::remove(key.clone());
+            Self::deposit_event(Event::StateUpdate(
+                req_id,
+                key.ns,
+                key.table.into(),
+                key.pk.into(),
+            ));
             Ok(().into())
         }
 
@@ -217,6 +254,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             key: GmetadataKey,
             value: Vec<u8>,
+            req_id: H256,
         ) -> DispatchResultWithPostInfo {
             Self::check_namespace(origin, key.ns)?;
             let mut old_value = IndexStore::<T>::get(&key);
@@ -225,13 +263,20 @@ pub mod pallet {
                     Some(idx) => {
                         old_value.data.remove(idx);
                         old_value.data.sort();
-                        old_value.update_time = 0;
-                        IndexStore::<T>::insert(key, old_value);
+                        old_value.update_time =
+                            T::UnixTime::now().as_millis().saturated_into::<u64>();
+                        IndexStore::<T>::insert(key.clone(), old_value);
                     }
                     None => {}
                 },
                 None => {}
             }
+            Self::deposit_event(Event::StateUpdate(
+                req_id,
+                key.ns,
+                key.table.into(),
+                key.pk.into(),
+            ));
             Ok(().into())
         }
     }

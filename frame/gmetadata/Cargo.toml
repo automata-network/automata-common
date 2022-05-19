@@ -23,6 +23,7 @@ sp-io = { git = 'https://github.com/automata-network/substrate.git', branch = 'p
 blake2 = { version = "0.9.1", default-features = false }
 primitives = { package = "automata-primitives", path = "../../primitives", default-features = false }
 frame-benchmarking = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false, optional = true }
+pallet-timestamp = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false }
 hex = { version = "0.4", default-features = false }
 
 [dev-dependencies]
