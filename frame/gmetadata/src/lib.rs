@@ -31,16 +31,16 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn get_namespace_id)]
     pub type NamespaceIdStore<T: Config> =
-        StorageMap<_, Blake2_128Concat, GmetadataNamespaceName, u64>;
+        StorageMap<_, Blake2_128Concat, GmetadataNamespaceName, u32>;
 
     #[pallet::storage]
     #[pallet::getter(fn get_namespace)]
     pub type NamespaceStore<T: Config> =
-        StorageMap<_, Blake2_128Concat, u64, GmetadataNamespaceInfo<T::AccountId>>;
+        StorageMap<_, Blake2_128Concat, u32, GmetadataNamespaceInfo<T::AccountId>>;
 
     #[pallet::storage]
     #[pallet::getter(fn latest_namespace_id)]
-    pub type LatestNamespaceId<T> = StorageValue<_, u64, ValueQuery>;
+    pub type LatestNamespaceId<T> = StorageValue<_, u32, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn get_value)]
@@ -57,7 +57,7 @@ pub mod pallet {
     pub enum Event<T: Config> {
         StateUpdate(
             /*req_id*/ H256,
-            /*namespace*/ u64,
+            /*namespace*/ u32,
             /*table*/ Vec<u8>,
             /*pk*/ Vec<u8>,
         ),
@@ -76,7 +76,7 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub fn namespace_add_owner(
             origin: OriginFor<T>,
-            id: u64,
+            id: u32,
             account: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             NamespaceStore::<T>::try_mutate(id, |ns| -> DispatchResult {
@@ -99,7 +99,7 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub fn namespace_remove_owner(
             origin: OriginFor<T>,
-            id: u64,
+            id: u32,
             account: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let mut ns = match NamespaceStore::<T>::get(id) {
@@ -304,7 +304,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        fn check_namespace(origin: OriginFor<T>, ns_id: u64) -> DispatchResultWithPostInfo {
+        fn check_namespace(origin: OriginFor<T>, ns_id: u32) -> DispatchResultWithPostInfo {
             let ns = match NamespaceStore::<T>::get(ns_id) {
                 Some(ns) => ns,
                 None => return Err(Error::<T>::NamespaceNotFound.into()),

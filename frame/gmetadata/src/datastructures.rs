@@ -94,7 +94,7 @@ impl Serialize for HexBytes {
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct GmetadataNamespaceInfo<AccountId> {
-    pub id: u64,
+    pub id: u32,
     pub name: Vec<u8>,
     pub owners: Vec<AccountId>,
 }
@@ -114,7 +114,7 @@ pub struct GmetadataIndexInfo {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct GmetadataKey {
-    pub ns: u64,         // namespace id
+    pub ns: u32,         // namespace id
     pub table: HexBytes, // table name
     pub pk: HexBytes,    // primary key
 }
