@@ -14,8 +14,8 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use automata_traits::attestor::ApplicationTrait;
     use automata_traits::AttestorAccounting;
-    use frame_support::dispatch::DispatchResultWithPostInfo;
     use frame_support::ensure;
     use frame_support::traits::{Currency, ReservableCurrency};
     use frame_support::{
@@ -27,16 +27,18 @@ pub mod pallet {
         offchain::{SendTransactionTypes, SubmitTransaction},
         pallet_prelude::*,
     };
-    use primitives::{BlockNumber, attestor::ReportType};
-    use automata_traits::attestor::ApplicationTrait;
+    use primitives::{attestor::ReportType, BlockNumber};
     #[cfg(feature = "full_crypto")]
     use sp_core::crypto::Pair;
     #[cfg(feature = "full_crypto")]
     use sp_core::sr25519::Pair as Sr25519Pair;
     use sp_core::sr25519::{Public, Signature};
-    use sp_runtime::{RuntimeDebug, SaturatedConversion, Percent};
+    use sp_runtime::{Percent, RuntimeDebug, SaturatedConversion};
     use sp_std::collections::{btree_map::BTreeMap, btree_set::BTreeSet};
     use sp_std::prelude::*;
+
+    #[cfg(feature = "std")]
+    use serde::{Deserialize, Serialize};
 
     /// Attestor struct
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
@@ -87,7 +89,7 @@ pub mod pallet {
         #[pallet::constant]
         type ExpectedAttestorNum: Get<u16>;
 
-        type ApplicationHandler: ApplicationTrait;
+        type ApplicationHandler: ApplicationTrait<AccountId = Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -295,27 +297,29 @@ pub mod pallet {
         #[pallet::weight(0)]
         pub fn attestor_remove(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(Attestors::<T>::contains_key(&who), Error::<T>::InvalidAttestor);
-            
+            ensure!(
+                Attestors::<T>::contains_key(&who),
+                Error::<T>::InvalidAttestor
+            );
+
             T::AttestorAccounting::attestor_unreserve(who.clone());
-            
-            let attestor_record = Attestors::<T>::get(&who);
-            for application_id in attestors.applications.inter() {
+            let attestor_record = <Attestors<T>>::get(&who);
+            for application_id in attestor_record.applications.iter() {
                 let mut attestors = AttestorsOfApplications::<T>::get(&application_id);
                 attestors.remove(&who);
 
-                if (attestors.is_empty()) {
+                if attestors.is_empty() {
                     AttestorsOfApplications::<T>::remove(&application_id);
                 } else {
                     AttestorsOfApplications::<T>::insert(&application_id, &attestors);
                 }
 
-                if MinimumAttestorNum::<T>::get() > attestors.len() as u16 {
-                    T::ApplicationHandler::application_unhealthy(&application_id);
+                if T::MinimumAttestorNum::get() > attestors.len() as u16 {
+                    T::ApplicationHandler::application_unhealthy(application_id.clone());
                 }
             }
 
-            AttestorNum::<T>::put(AttestorNum::<T>::get().saturated_sub(1));
+            AttestorNum::<T>::put(AttestorNum::<T>::get().saturating_sub(1));
             AttestorLastNotify::<T>::remove(&who);
             Attestors::<T>::remove(&who);
 
@@ -331,7 +335,10 @@ pub mod pallet {
             application_id: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(Attestors::<T>::contains_key(&who), Error::<T>::InvalidAttestor);
+            ensure!(
+                Attestors::<T>::contains_key(&who),
+                Error::<T>::InvalidAttestor
+            );
 
             let mut attestor_record = Attestors::<T>::get(&who);
             ensure!(
@@ -346,11 +353,11 @@ pub mod pallet {
                 attestorsOfApplication = AttestorsOfApplications::<T>::get(&application_id);
             }
             attestorsOfApplication.insert(who.clone());
-            AttestorsOfApplications::<T>::insert(&application_id, attestorsOfApplication);
-
-            if attestorsOfApplication.len() as u16 == MinimumAttestorNum::<T>::get() {
-                T::ApplicationHandler::application_healthy(&application_id);
+            if attestorsOfApplication.len() as u16 == T::MinimumAttestorNum::get() {
+                T::ApplicationHandler::application_healthy(application_id.clone());
             }
+
+            AttestorsOfApplications::<T>::insert(&application_id, attestorsOfApplication);
 
             Self::deposit_event(Event::ApplicationAttested(application_id, who));
 
@@ -363,18 +370,26 @@ pub mod pallet {
             application_id: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            
-            ensure!(Attestors::<T>::contains_key(&who), Errors::<T>::InvalidAttestor);
-            ensure!(Attestors::<T>::get(&who).applications.contains(&application_id), Errors::<T>::NotAttestingFor);
+
+            ensure!(
+                Attestors::<T>::contains_key(&who),
+                Error::<T>::InvalidAttestor
+            );
+            ensure!(
+                Attestors::<T>::get(&who)
+                    .applications
+                    .contains(&application_id),
+                Error::<T>::NotAttestingFor
+            );
 
             let mut attestors = AttestorsOfApplications::<T>::get(&application_id);
             attestors.remove(&who);
 
-            if (attestors.len() < MinimumAttestorNum::<T>::get()) {
-                T::ApplicationHandler::application_unhealthy(&application_id);
+            if (attestors.len() as u16) < T::MinimumAttestorNum::get() {
+                T::ApplicationHandler::application_unhealthy(application_id.clone());
             }
 
-            if (attestors.is_empty()) {
+            if attestors.is_empty() {
                 AttestorsOfApplications::<T>::remove(&application_id);
             } else {
                 AttestorsOfApplications::<T>::insert(&application_id, attestors);
@@ -385,6 +400,40 @@ pub mod pallet {
             Attestors::<T>::insert(&who, attestor);
 
             Self::deposit_event(Event::AttestorReport(who, application_id));
+
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn attestor_notify_chain(
+            _origin: OriginFor<T>,
+            message: Vec<u8>,
+            signature_raw_bytes: [u8; 64],
+        ) -> DispatchResultWithPostInfo {
+            // validate inputs
+            ensure!(message.len() == 40, Error::<T>::InvalidNotification);
+
+            let mut attestor = [0u8; 32];
+            attestor.copy_from_slice(&message[0..32]);
+
+            let pubkey = Public::from_raw(attestor.clone());
+            let signature = Signature::from_raw(signature_raw_bytes.clone());
+
+            #[cfg(feature = "full_crypto")]
+            ensure!(
+                Sr25519Pair::verify(&signature, message, &pubkey),
+                Error::<T>::InvalidNotification
+            );
+
+            let acc = T::AccountId::decode(&mut &attestor[..]).unwrap_or_default();
+            ensure!(
+                <Attestors<T>>::contains_key(&acc),
+                Error::<T>::InvalidAttestor
+            );
+
+            let block_number =
+                <frame_system::Pallet<T>>::block_number().saturated_into::<BlockNumber>();
+            <AttestorLastNotify<T>>::insert(&acc, block_number);
 
             Ok(().into())
         }
@@ -402,7 +451,7 @@ pub mod pallet {
         pub fn get_all_attestors() -> BTreeMap<T::AccountId, usize> {
             let mut result = BTreeMap::new();
             let iterator = <Attestors<T>>::iter().map(|(accountId, attestor)| {
-                result.insert(accountId, attestor.geodes.len());
+                result.insert(accountId, attestor.applications.len());
             });
             result
         }
@@ -415,7 +464,7 @@ pub mod pallet {
                     res.push((
                         attestor.url.clone(),
                         attestor.pubkey,
-                        attestor.geodes.len() as u32,
+                        attestor.applications.len() as u32,
                     ));
                 })
                 .all(|_| true);
@@ -458,8 +507,8 @@ pub mod pallet {
                         attestorsOfApplications.push(key);
                     })
                     .all(|_| true);
-                for geode_attestor in geode_attestors.iter() {
-                    <AttestorsOfApplications<T>>::remove(geode_attestor);
+                for geode_attestor in <AttestorsOfApplications<T>>::iter() {
+                    <AttestorsOfApplications<T>>::remove(geode_attestor.0);
                 }
             }
 
