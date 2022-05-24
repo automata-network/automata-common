@@ -1,8 +1,7 @@
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "std")]
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 use sp_runtime::RuntimeDebug;
 use sp_core::{Encode, Decode};
 
