@@ -315,51 +315,63 @@ pub mod pallet {
 
         pub fn query_with_index(
             index_key: GmetadataKey,
+            value_key: GmetadataKey,
+            start: HexBytes,
+            limit: u64,
+        ) -> GmetadataQueryResult {
+            Self::query_with_indexes(vec![index_key], value_key, start, limit)
+        }
+
+        pub fn query_with_indexes(
+            index_keys: Vec<GmetadataKey>,
             mut value_key: GmetadataKey,
             start: HexBytes,
             limit: u64,
         ) -> GmetadataQueryResult {
-            match Self::get_index(index_key) {
-                Some(index_info) => {
-                    let mut result = Vec::new();
-                    let mut cursor = None;
-                    let mut skip = true;
-                    for key in &index_info.data {
-                        if skip {
-                            if start.len() == 0 {
-                                skip = false;
-                            } else if start.eq(key) {
-                                skip = false;
-                                continue;
-                            }
-                        }
-                        if skip {
-                            continue;
-                        }
-                        value_key.pk = key.clone().into();
-                        match Self::get_value(value_key.clone()) {
-                            Some(val) => {
-                                result.push(val.data.into());
-                                if result.len() >= limit as _ {
-                                    if Some(key) != index_info.data.last() {
-                                        cursor = Some(key.clone().into());
-                                    }
-                                    break;
+            let mut result = Vec::new();
+            let mut cursor = None;
+            let mut skip = true;
+            for index_key in index_keys {
+                match Self::get_index(index_key) {
+                    Some(index_info) => {
+                        for key in &index_info.data {
+                            if skip {
+                                if start.len() == 0 {
+                                    skip = false;
+                                } else if start.eq(key) {
+                                    skip = false;
+                                    continue;
                                 }
                             }
-                            None => {}
-                        };
+                            if skip {
+                                continue;
+                            }
+                            value_key.pk = key.clone().into();
+                            match Self::get_value(value_key.clone()) {
+                                Some(val) => {
+                                    result.push(val.data.into());
+                                    if result.len() >= limit as _ {
+                                        if Some(key) != index_info.data.last() {
+                                            cursor = Some(key.clone().into());
+                                        }
+                                        break;
+                                    }
+                                }
+                                None => {}
+                            };
+                        }
                     }
-                    let cursor = match cursor {
-                        Some(cursor) => cursor,
-                        None => HexBytes::new(),
-                    };
-                    GmetadataQueryResult {
-                        list: result,
-                        cursor: cursor.into(),
-                    }
+                    None => {}
                 }
-                None => GmetadataQueryResult::default(),
+            }
+
+            let cursor = match cursor {
+                Some(cursor) => cursor,
+                None => HexBytes::new(),
+            };
+            GmetadataQueryResult {
+                list: result,
+                cursor: cursor.into(),
             }
         }
     }
