@@ -330,6 +330,15 @@ impl pallet_daoportal::Config for Runtime {
     type DAOPortalWeightInfo = pallet_daoportal::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_geode::Config for Runtime {
+    type Event = Event;
+}
+
+impl pallet_geodesession::Config for Runtime {
+    type Event = Event;
+    type GeodeHandler = pallet_geode::Pallet<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -351,6 +360,8 @@ construct_runtime!(
         Economics: pallet_economics::{Pallet, Call, Event<T>},
         Game: pallet_game::{Pallet, Call, Storage, Event<T>},
         DAOPortal: pallet_daoportal::{Pallet, Call, Storage, Event<T>},
+        Geode: pallet_geode::{Pallet, Call, Storage, Event<T>},
+        GeodeSession: pallet_geodesession::{Pallet, Call, Storage, Event<T>},
     }
 );
 
