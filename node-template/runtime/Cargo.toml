@@ -51,6 +51,9 @@ pallet-economics = { version = "0.1.0", default-features = false, path = "../../
 pallet-game = { version = "0.1.0", default-features = false, path = "../../frame/game" }
 pallet-daoportal = { version = "0.1.0", default-features = false, path = "../../frame/daoportal" }
 pallet-gmetadata = { version = "0.1.0", default-features = false, path = "../../frame/gmetadata" }
+pallet-geodesession = { version = "0.1.0", default-features = false, path = "../../frame/geodesession" }
+pallet-geode = { version = "0.1.0", default-features = false, path = "../../frame/geode" }
+pallet-attestor = { version = "0.1.0", default-features = false, path = "../../frame/attestor" }
 
 [build-dependencies]
 substrate-wasm-builder = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }

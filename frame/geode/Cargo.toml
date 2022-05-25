@@ -24,6 +24,7 @@ sp-std = {git = 'https://github.com/automata-network/substrate.git', branch = 'p
 primitives = { package = "automata-primitives", path = "../../primitives", default-features = false }
 pallet-attestor = { default-features = false, path = '../attestor' }
 automata-traits = { package = "automata-traits", path = "../../traits", default-features = false }
+log = { version = "0.4.17" }
 
 [dev-dependencies]
 sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }

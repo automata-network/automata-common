@@ -340,6 +340,15 @@ impl pallet_gmetadata::Config for Runtime {
     type MaxIndexLength = MaxIndexLength;
 }
 
+impl pallet_geode::Config for Runtime {
+    type Event = Event;
+}
+
+impl pallet_geodesession::Config for Runtime {
+    type Event = Event;
+    type GeodeHandler = pallet_geode::Pallet<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -362,6 +371,8 @@ construct_runtime!(
         Game: pallet_game::{Pallet, Call, Storage, Event<T>},
         DAOPortal: pallet_daoportal::{Pallet, Call, Storage, Event<T>},
         Gmetadata: pallet_gmetadata::{Pallet, Call, Storage, Event<T>},
+        Geode: pallet_geode::{Pallet, Call, Storage, Event<T>},
+        GeodeSession: pallet_geodesession::{Pallet, Call, Storage, Event<T>},
     }
 );
 

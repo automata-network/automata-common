@@ -122,6 +122,30 @@ pub mod pallet {
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
+    impl<T: Config> automata_traits::geode::GeodeTrait for Pallet<T> {
+        type AccountId = T::AccountId;
+        type Hash = T::Hash;
+        fn on_new_session(_: u32) -> Result<(), DispatchError> {
+            todo!()
+        }
+
+        fn on_geode_offline(_: u32) -> Result<(), DispatchError> {
+            todo!()
+        }
+
+        fn on_geode_unhealthy(_: T::AccountId) -> Result<(), DispatchError> {
+            todo!()
+        }
+
+        fn on_order_dispatched(_: T::AccountId, _: T::Hash) -> Result<(), DispatchError> {
+            todo!()
+        }
+
+        fn on_expired_check() {
+            log::info!("on_expired_check");
+        }
+    }
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Called when geode want to register itself on chain.
