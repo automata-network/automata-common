@@ -122,30 +122,6 @@ pub mod pallet {
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
-    impl<T: Config> automata_traits::geode::GeodeTrait for Pallet<T> {
-        type AccountId = T::AccountId;
-        type Hash = T::Hash;
-        fn on_new_session(_: u32) -> Result<(), DispatchError> {
-            todo!()
-        }
-
-        fn on_geode_offline(_: u32) -> Result<(), DispatchError> {
-            todo!()
-        }
-
-        fn on_geode_unhealthy(_: T::AccountId) -> Result<(), DispatchError> {
-            todo!()
-        }
-
-        fn on_order_dispatched(_: T::AccountId, _: T::Hash) -> Result<(), DispatchError> {
-            todo!()
-        }
-
-        fn on_expired_check() {
-            log::info!("on_expired_check");
-        }
-    }
-
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Called when geode want to register itself on chain.
@@ -300,6 +276,44 @@ pub mod pallet {
             geode_id: T::AccountId,
             order_id: T::Hash,
         ) -> DispatchResultWithPostInfo {
+            Ok(().into())
+        }
+    }
+
+    impl<T: Config> automata_traits::geode::GeodeTrait for Pallet<T> {
+        type AccountId = T::AccountId;
+        type Hash = T::Hash;
+        fn on_new_session(session_index: u32) -> Result<(), DispatchError> {
+            todo!()
+        }
+
+        fn on_geode_offline(session_index: u32) -> Result<(), DispatchError> {
+            todo!()
+        }
+
+        fn on_geode_unhealthy(geode_id: T::AccountId) -> Result<(), DispatchError> {
+            todo!()
+        }
+
+        fn on_order_dispatched(geode_id: T::AccountId, order_id: T::Hash) -> Result<(), DispatchError> {
+            todo!()
+        }
+
+        fn on_expired_check() {
+            log::info!("on_expired_check");
+        }
+    }
+
+    impl<T: Config> automata_traits::attestor::ApplicationTrait for Pallet<T> {
+        type AccountId = T::AccountId;
+        /// Currently we will only report a simple `unhealthy` state, but there might be more status in the future.
+        /// E.g maybe something wrong with the application binary
+        fn application_unhealthy(geode_id: Self::AccountId) -> DispatchResult {
+            Ok(().into())
+        }
+
+        /// Application are attested by several attestors, and reach healthy state
+        fn application_healthy(geode_id: Self::AccountId) -> DispatchResult {
             Ok(().into())
         }
     }
