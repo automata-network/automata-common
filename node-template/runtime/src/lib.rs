@@ -330,6 +330,69 @@ impl pallet_daoportal::Config for Runtime {
     type DAOPortalWeightInfo = pallet_daoportal::weights::SubstrateWeight<Runtime>;
 }
 
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+    Call: From<C>,
+{
+    type Extrinsic = UncheckedExtrinsic;
+    type OverarchingCall = Call;
+}
+
+parameter_types! {
+    pub const AttestorStakingAmount: Balance = 1000;
+    pub const GeodeStakingAmount: Balance = 1000;
+    pub const AttestorTotalReward: Balance = 1000;
+    pub const GeodeTotalReward: Balance = 1000;
+    pub const GeodeTerminatePenalty: Balance = 1000;
+    pub const GeodeMisconductForAttestor: Balance = 1000;
+    pub const GeodeMisconductForServiceUser: Balance = 1000;
+    pub const SlotLength: BlockNumber = 100;
+    pub const AttestorBasicRewardRatio: u8 = 1;
+    pub const CommissionRateForService: u8 = 1;
+    pub const CommissionRateForOnDemand: u8 = 1;
+    pub const AttestorRewardEachSlot: Balance = 1000;
+    pub const GeodeRewardEachSlot: Balance = 1000;
+}
+
+impl pallet_accounting::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type GetAttestors = Attestor;
+    type GetGeodes = Geode;
+    type AttestorStakingAmount = AttestorStakingAmount;
+    type GeodeStakingAmount = GeodeStakingAmount;
+    type AttestorTotalReward = AttestorTotalReward;
+    type GeodeTotalReward = GeodeTotalReward;
+    type GeodeTerminatePenalty = GeodeTerminatePenalty;
+
+    type GeodeMisconductForAttestor = GeodeMisconductForAttestor;
+    type GeodeMisconductForServiceUser = GeodeMisconductForServiceUser;
+
+    type SlotLength = SlotLength;
+
+    type AttestorBasicRewardRatio = AttestorBasicRewardRatio;
+    type CommissionRateForService = CommissionRateForService;
+    type CommissionRateForOnDemand = CommissionRateForOnDemand;
+
+    type AttestorRewardEachSlot = AttestorRewardEachSlot;
+    type GeodeRewardEachSlot = GeodeRewardEachSlot;
+}
+
+parameter_types! {
+    pub const MinimumAttestorNum: u16 = 1;
+    pub const ExpectedAttestorNum: u16 = 2;
+}
+
+impl pallet_attestor::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type Call = Call;
+    type AttestorAccounting = pallet_accounting::Pallet<Self>;
+    type MinimumAttestorNum = MinimumAttestorNum;
+    type ExpectedAttestorNum = ExpectedAttestorNum;
+    type ApplicationHandler = pallet_geode::Pallet<Self>;
+}
+
 impl pallet_geode::Config for Runtime {
     type Event = Event;
 }
@@ -360,6 +423,7 @@ construct_runtime!(
         Economics: pallet_economics::{Pallet, Call, Event<T>},
         Game: pallet_game::{Pallet, Call, Storage, Event<T>},
         DAOPortal: pallet_daoportal::{Pallet, Call, Storage, Event<T>},
+        Attestor: pallet_attestor::{Pallet, Call, Storage, Event<T>},
         Geode: pallet_geode::{Pallet, Call, Storage, Event<T>},
         GeodeSession: pallet_geodesession::{Pallet, Call, Storage, Event<T>},
     }
