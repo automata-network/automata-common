@@ -434,6 +434,7 @@ construct_runtime!(
         Game: pallet_game::{Pallet, Call, Storage, Event<T>},
         DAOPortal: pallet_daoportal::{Pallet, Call, Storage, Event<T>},
         Gmetadata: pallet_gmetadata::{Pallet, Call, Storage, Event<T>},
+        Accounting: pallet_accounting::{Pallet, Call, Storage, Event<T>},
         Attestor: pallet_attestor::{Pallet, Call, Storage, Event<T>},
         Geode: pallet_geode::{Pallet, Call, Storage, Event<T>},
         GeodeSession: pallet_geodesession::{Pallet, Call, Storage, Event<T>},
