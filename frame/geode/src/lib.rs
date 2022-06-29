@@ -120,7 +120,12 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    pub enum Event<T: Config> {}
+    #[pallet::metadata(T::AccountId = "AccountId")]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        RegisterGeode(T::AccountId),
+        RemoveGeode(T::AccountId),
+    }
 
     #[pallet::error]
     pub enum Error<T> {
@@ -163,7 +168,7 @@ pub mod pallet {
                     ensure!(existing_geode.provider == who, Error::<T>::DuplicateGeodeId);
                     if let WorkingState::Exited { .. } = existing_geode.working_state {
                         existing_geode.working_state = WorkingState::Idle;
-                        <Geodes<T>>::insert(geode.id, existing_geode);
+                        <Geodes<T>>::insert(geode.id.clone(), existing_geode);
                     } else {
                         return Err(Error::<T>::StateNotExited.into());
                     }
@@ -178,7 +183,7 @@ pub mod pallet {
                     <Geodes<T>>::insert(geode_record.id.clone(), geode_record);
                 }
             }
-
+            Self::deposit_event(Event::RegisterGeode(geode.id));
             Ok(().into())
         }
 
@@ -192,7 +197,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let _ = Self::get_geode_and_check_owner(&who, &geode_id)?;
-            <OfflineRequests<T>>::insert(geode_id.clone(), geode_id);
+            <OfflineRequests<T>>::insert(geode_id.clone(), geode_id.clone());
+            Self::deposit_event(Event::RemoveGeode(geode_id));
             Ok(().into())
         }
 
@@ -257,6 +263,11 @@ pub mod pallet {
                 }
                 Ok(())
             })?;
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn geode_finalizing_failed(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             Ok(().into())
         }
 
@@ -354,10 +365,11 @@ pub mod pallet {
         }
 
         fn set_healthy_state(geode_id: T::AccountId, state: HealthyState) -> Option<HealthyState> {
-            match <Geodes<T>>::get(geode_id) {
+            match <Geodes<T>>::get(&geode_id) {
                 Some(mut geode) => {
                     let old = Some(geode.healthy_state);
                     geode.healthy_state = state;
+                    <Geodes<T>>::insert(geode_id, geode);
                     old
                 }
                 None => None,
@@ -469,21 +481,21 @@ pub mod pallet {
         fn on_expired_check() {
             for (id, geode) in <Geodes<T>>::iter() {
                 match geode.working_state {
-                    WorkingState::Idle => {},
+                    WorkingState::Idle => {}
                     WorkingState::Pending { session_index } => {
                         // check whether it spend too much time in pending phase
                         // get the timeout duration from order
-                        // 
+                        //
 
                         // get the timeout the order
                         // check the session_idx changed?
                         // mark unhealthy
                         // redispatch as an emergency order
-                    },
-                    WorkingState::Working { .. } => {},
-                    WorkingState::Finalizing { .. } => {},
-                    WorkingState::Exiting => {},
-                    WorkingState::Exited { .. } => {},
+                    }
+                    WorkingState::Working { .. } => {}
+                    WorkingState::Finalizing { .. } => {}
+                    WorkingState::Exiting => {}
+                    WorkingState::Exited { .. } => {}
                 }
             }
         }

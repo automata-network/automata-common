@@ -255,6 +255,7 @@ pub mod pallet {
 
             let mut attestor = [0u8; 32];
             attestor.copy_from_slice(&message[0..32]);
+            log::info!("1");
 
             let pubkey = Public::from_raw(attestor.clone());
             let signature = Signature::from_raw(signature_raw_bytes.clone());
@@ -264,6 +265,8 @@ pub mod pallet {
                 Sr25519Pair::verify(&signature, message, &pubkey),
                 Error::<T>::InvalidNotification
             );
+
+            log::info!("2");
 
             let acc = T::AccountId::decode(&mut &attestor[..]).unwrap_or_default();
             ensure!(
@@ -275,6 +278,7 @@ pub mod pallet {
                 <frame_system::Pallet<T>>::block_number().saturated_into::<BlockNumber>();
             <AttestorLastNotify<T>>::insert(&acc, block_number);
 
+            log::info!("3");
             Ok(().into())
         }
 
@@ -527,6 +531,16 @@ pub mod pallet {
 
             // reset AttestorNum
             <AttestorNum<T>>::put(0);
+        }
+
+        /// Return list apps an attestor is attesting
+        pub fn attestor_attested_appids(attestor: T::AccountId) -> Vec<T::AccountId> {
+            let mut res = Vec::new();
+            let attestor = Attestors::<T>::get(&attestor);
+            for app_id in &attestor.applications {
+                res.push(app_id.clone());
+            }
+            res
         }
     }
 

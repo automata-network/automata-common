@@ -10,7 +10,7 @@ fn it_works_attestor_attest_geode() {
         let geode_account = 2;
 
         register_attestor(attestor_account);
-        provider_register_geode(attestor_account, geode_account);
+        assert_ok!(provider_register_geode(attestor_account, geode_account));
 
         assert_ok!(LivenessModule::attestor_attest_geode(
             Origin::signed(attestor_account),

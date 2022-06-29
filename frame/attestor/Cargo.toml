@@ -26,6 +26,8 @@ serde = { version = "1.0.119", optional = true, features = ["derive"] }
 primitives = { package = "automata-primitives", path = "../../primitives", default-features = false }
 automata-traits = { package = "automata-traits", path = "../../traits", default-features = false }
 
+log = { version = "0.4.17" }
+
 [dev-dependencies]
 serde = { version = "1.0.119" }
 sp-io = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
