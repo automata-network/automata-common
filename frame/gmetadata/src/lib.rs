@@ -61,6 +61,18 @@ pub mod pallet {
             /*table*/ Vec<u8>,
             /*pk*/ Vec<u8>,
         ),
+        IndexUpdate(
+            /*req_id*/ H256,
+            /*namespace*/ u32,
+            /*table*/ Vec<u8>,
+            /*pk*/ Vec<u8>,
+        ),
+        ValueUpdate(
+            /*req_id*/ H256,
+            /*namespace*/ u32,
+            /*table*/ Vec<u8>,
+            /*pk*/ Vec<u8>,
+        ),
     }
 
     #[pallet::error]
@@ -69,6 +81,7 @@ pub mod pallet {
         NamespaceNotFound,
         NamespaceOwnerAlreadyExists,
         InvalidNamespaceName,
+        InvalidKey,
     }
 
     #[pallet::call]
@@ -180,6 +193,7 @@ pub mod pallet {
             req_id: H256,
         ) -> DispatchResultWithPostInfo {
             Self::check_namespace(origin, key.ns)?;
+            Self::check_key(&key)?;
             ValueStore::<T>::insert(
                 key.clone(),
                 GmetadataValueInfo {
@@ -188,6 +202,12 @@ pub mod pallet {
                 },
             );
             Self::deposit_event(Event::StateUpdate(
+                req_id,
+                key.ns,
+                key.table.clone().into(),
+                key.pk.clone().into(),
+            ));
+            Self::deposit_event(Event::ValueUpdate(
                 req_id,
                 key.ns,
                 key.table.into(),
@@ -204,6 +224,7 @@ pub mod pallet {
             req_id: H256,
         ) -> DispatchResultWithPostInfo {
             Self::check_namespace(origin, key.ns)?;
+            Self::check_key(&key)?;
             let mut old_value = IndexStore::<T>::get(&key);
             match &mut old_value {
                 Some(old_value) => {
@@ -226,6 +247,12 @@ pub mod pallet {
             Self::deposit_event(Event::StateUpdate(
                 req_id,
                 key.ns,
+                key.table.clone().into(),
+                key.pk.clone().into(),
+            ));
+            Self::deposit_event(Event::IndexUpdate(
+                req_id,
+                key.ns,
                 key.table.into(),
                 key.pk.into(),
             ));
@@ -241,6 +268,12 @@ pub mod pallet {
             Self::check_namespace(origin, key.ns)?;
             ValueStore::<T>::remove(key.clone());
             Self::deposit_event(Event::StateUpdate(
+                req_id,
+                key.ns,
+                key.table.clone().into(),
+                key.pk.clone().into(),
+            ));
+            Self::deposit_event(Event::ValueUpdate(
                 req_id,
                 key.ns,
                 key.table.into(),
@@ -272,6 +305,12 @@ pub mod pallet {
                 None => {}
             }
             Self::deposit_event(Event::StateUpdate(
+                req_id,
+                key.ns,
+                key.table.clone().into(),
+                key.pk.clone().into(),
+            ));
+            Self::deposit_event(Event::IndexUpdate(
                 req_id,
                 key.ns,
                 key.table.into(),
@@ -310,6 +349,16 @@ pub mod pallet {
                 None => return Err(Error::<T>::NamespaceNotFound.into()),
             };
             Self::check_owner_or_root(&origin, &ns.owners)?;
+            Ok(().into())
+        }
+
+        fn check_key(key: &GmetadataKey) -> DispatchResultWithPostInfo {
+            if key.table.len() > 100 {
+                return Err(Error::<T>::InvalidKey.into());
+            }
+            if key.pk.len() > 500 {
+                return Err(Error::<T>::InvalidKey.into());
+            }
             Ok(().into())
         }
 
