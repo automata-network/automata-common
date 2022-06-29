@@ -200,6 +200,8 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
     let name = config.network.node_name.clone();
     let enable_grandpa = !config.disable_grandpa;
     let prometheus_registry = config.prometheus_registry().cloned();
+    let subscription_task_executor =
+        sc_rpc::SubscriptionTaskExecutor::new(task_manager.spawn_handle());
 
     let rpc_extensions_builder = {
         let client = client.clone();
@@ -212,7 +214,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
                 deny_unsafe,
             };
 
-            Ok(crate::rpc::create_full(deps))
+            Ok(crate::rpc::create_full(deps, subscription_task_executor.clone()))
         })
     };
 

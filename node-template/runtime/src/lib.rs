@@ -457,7 +457,35 @@ pub type Executive = frame_executive::Executive<
     AllPallets,
 >;
 
+sp_api::decl_runtime_apis! {
+    pub trait AttestorApi {
+        fn attestor_list() -> Vec<(Vec<u8>, Vec<u8>, u32)>;
+        fn attestor_attested_appids(attestor: AccountId) -> Vec<AccountId>;
+        fn attestor_heartbeat(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool;
+    }
+    pub trait GeodeApi {
+    }
+}
+
 impl_runtime_apis! {
+    impl crate::AttestorApi<Block> for Runtime {
+        fn attestor_list() -> Vec<(Vec<u8>, Vec<u8>, u32)> {
+            Attestor::attestor_list()
+        }
+
+        fn attestor_attested_appids(attestor: AccountId) -> Vec<AccountId> {
+            Attestor::attestor_attested_appids(attestor)
+        }
+
+        fn attestor_heartbeat(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool {
+            let origin = Origin::root();
+            match Attestor::attestor_heartbeat(origin, message, signature_raw_bytes) {
+                Ok(_) => true,
+                Err(_) => false,
+            }
+        }
+    }
+
     impl sp_api::Core<Block> for Runtime {
         fn version() -> RuntimeVersion {
             VERSION
