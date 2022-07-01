@@ -137,7 +137,6 @@ fn bad_origin() {
             pk: "".into(),
         };
 
-        
         let max_index_length = 10;
         for i in 0..max_index_length {
             assert_ok!(Gmetadata::add_index(
@@ -148,7 +147,7 @@ fn bad_origin() {
             ));
         }
         assert_noop!(
-            Gmetadata::add_index(u1.into(), key.clone(), "11".into(), req_id),
+            Gmetadata::add_index(u1.into(), key.clone(), "max_index_length".into(), req_id),
             Error::<Test>::IndexLengthTooLong
         );
     });
