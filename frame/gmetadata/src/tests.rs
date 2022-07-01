@@ -40,7 +40,8 @@ fn test_query_with_index() {
         serde_json::to_value(&arg.cursor).unwrap(),
         serde_json::to_value(&arg.limit).unwrap(),
     ]);
-    println!("{}", serde_json::to_string(&value).unwrap());
+    let expect_req = r#"[{"ns":1,"pk":"0x","table":"0x6e6574776f726b"},{"ns":1,"pk":"0x","table":"0x6e6574776f726b"},"0x",10]"#;
+    assert_eq!(serde_json::to_string(&value).unwrap(), expect_req.to_string());
 }
 
 #[test]
