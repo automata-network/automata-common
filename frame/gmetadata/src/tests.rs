@@ -41,7 +41,10 @@ fn test_query_with_index() {
         serde_json::to_value(&arg.limit).unwrap(),
     ]);
     let expect_req = r#"[{"ns":1,"pk":"0x","table":"0x6e6574776f726b"},{"ns":1,"pk":"0x","table":"0x6e6574776f726b"},"0x",10]"#;
-    assert_eq!(serde_json::to_string(&value).unwrap(), expect_req.to_string());
+    assert_eq!(
+        serde_json::to_string(&value).unwrap(),
+        expect_req.to_string()
+    );
 }
 
 #[test]
@@ -127,6 +130,27 @@ fn bad_origin() {
             "1".into(),
             req_id
         ));
+
+        let key = GmetadataKey {
+            ns: 1,
+            table: "test_max_index_length".into(),
+            pk: "".into(),
+        };
+
+        
+        let max_index_length = 10;
+        for i in 0..max_index_length {
+            assert_ok!(Gmetadata::add_index(
+                u1.into(),
+                key.clone(),
+                format!("{}", i).into(),
+                req_id
+            ));
+        }
+        assert_noop!(
+            Gmetadata::add_index(u1.into(), key.clone(), "11".into(), req_id),
+            Error::<Test>::IndexLengthTooLong
+        );
     });
 }
 

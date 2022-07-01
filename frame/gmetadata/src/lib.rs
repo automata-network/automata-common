@@ -22,6 +22,9 @@ pub mod pallet {
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type UnixTime: UnixTime;
+
+        #[pallet::constant]
+        type MaxIndexLength: Get<u32>;
     }
 
     #[pallet::pallet]
@@ -82,6 +85,7 @@ pub mod pallet {
         NamespaceOwnerAlreadyExists,
         InvalidNamespaceName,
         InvalidKey,
+        IndexLengthTooLong,
     }
 
     #[pallet::call]
@@ -229,6 +233,9 @@ pub mod pallet {
             match &mut old_value {
                 Some(old_value) => {
                     if !old_value.data.contains(&value) {
+                        if old_value.data.len() as u32 >= T::MaxIndexLength::get() {
+                            return Err(<Error<T>>::IndexLengthTooLong.into());
+                        }
                         old_value.data.push(value);
                         old_value.data.sort();
                         old_value.update_time =
@@ -380,10 +387,16 @@ pub mod pallet {
             let mut result = Vec::new();
             let mut cursor = None;
             let mut skip = true;
+            let max_index_length = T::MaxIndexLength::get() as usize;
             for index_key in index_keys {
                 match Self::get_index(index_key) {
                     Some(index_info) => {
-                        for key in &index_info.data {
+                        let list = if index_info.data.len() > max_index_length {
+                            &index_info.data[..max_index_length]
+                        } else {
+                            &index_info.data
+                        };
+                        for key in list {
                             if skip {
                                 if start.len() == 0 {
                                     skip = false;

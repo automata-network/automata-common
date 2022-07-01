@@ -64,9 +64,14 @@ impl frame_system::Config for Test {
     type Version = ();
 }
 
+parameter_types! {
+    pub const MaxIndexLength: u32 = 10;
+}
+
 impl Config for Test {
     type Event = Event;
     type UnixTime = Timestamp;
+    type MaxIndexLength = MaxIndexLength;
 }
 
 pub struct ExtBuilder {}
