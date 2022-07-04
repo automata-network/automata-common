@@ -330,6 +330,16 @@ impl pallet_daoportal::Config for Runtime {
     type DAOPortalWeightInfo = pallet_daoportal::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+    pub const MaxIndexLength: u32 = 100000;
+}
+
+impl pallet_gmetadata::Config for Runtime {
+    type Event = Event;
+    type UnixTime = Timestamp;
+    type MaxIndexLength = MaxIndexLength;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -351,6 +361,7 @@ construct_runtime!(
         Economics: pallet_economics::{Pallet, Call, Event<T>},
         Game: pallet_game::{Pallet, Call, Storage, Event<T>},
         DAOPortal: pallet_daoportal::{Pallet, Call, Storage, Event<T>},
+        Gmetadata: pallet_gmetadata::{Pallet, Call, Storage, Event<T>},
     }
 );
 
