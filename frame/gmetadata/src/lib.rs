@@ -375,7 +375,7 @@ pub mod pallet {
             start: HexBytes,
             limit: u64,
         ) -> GmetadataQueryResult {
-            Self::query_with_indexes(vec![index_key], value_key, start, limit)
+            Self::query_with_indexes(sp_std::vec![index_key], value_key, start, limit)
         }
 
         pub fn query_with_indexes(
