@@ -157,7 +157,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(0)]
-        pub fn remove_last_chain(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn remove_last_chain2(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
 
             let chain_index = Self::latest_chain_index();
