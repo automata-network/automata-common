@@ -391,6 +391,7 @@ impl pallet_accounting::Config for Runtime {
 parameter_types! {
     pub const MinimumAttestorNum: u16 = 1;
     pub const ExpectedAttestorNum: u16 = 2;
+    pub const AttestorNotifyTimeoutBlockNumber: u32 = 5;
 }
 
 impl pallet_attestor::Config for Runtime {
@@ -400,6 +401,7 @@ impl pallet_attestor::Config for Runtime {
     type AttestorAccounting = pallet_accounting::Pallet<Self>;
     type MinimumAttestorNum = MinimumAttestorNum;
     type ExpectedAttestorNum = ExpectedAttestorNum;
+    type AttestorNotifyTimeoutBlockNumber = AttestorNotifyTimeoutBlockNumber;
     type ApplicationHandler = pallet_geode::Pallet<Self>;
 }
 
@@ -435,7 +437,7 @@ construct_runtime!(
         DAOPortal: pallet_daoportal::{Pallet, Call, Storage, Event<T>},
         Gmetadata: pallet_gmetadata::{Pallet, Call, Storage, Event<T>},
         Accounting: pallet_accounting::{Pallet, Call, Storage, Event<T>},
-        Attestor: pallet_attestor::{Pallet, Call, Storage, Event<T>},
+        Attestor: pallet_attestor::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
         Geode: pallet_geode::{Pallet, Call, Storage, Event<T>},
         GeodeSession: pallet_geodesession::{Pallet, Call, Storage, Event<T>},
     }
@@ -472,7 +474,7 @@ sp_api::decl_runtime_apis! {
     pub trait AttestorApi {
         fn attestor_list() -> Vec<(Vec<u8>, Vec<u8>, u32)>;
         fn attestor_attested_appids(attestor: AccountId) -> Vec<AccountId>;
-        fn attestor_heartbeat(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool;
+        fn unsigned_attestor_heartbeat(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool;
     }
     pub trait GeodeApi {
     }
@@ -488,9 +490,8 @@ impl_runtime_apis! {
             Attestor::attestor_attested_appids(attestor)
         }
 
-        fn attestor_heartbeat(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool {
-            let origin = Origin::root();
-            match Attestor::attestor_heartbeat(origin, message, signature_raw_bytes) {
+        fn unsigned_attestor_heartbeat(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool {
+            match Attestor::unsigned_attestor_heartbeat(message, signature_raw_bytes) {
                 Ok(_) => true,
                 Err(_) => false,
             }

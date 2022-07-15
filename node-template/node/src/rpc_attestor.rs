@@ -79,7 +79,7 @@ where
         let mut signature = [0_u8; 64];
         signature.copy_from_slice(&signature_raw_bytes);
         let result = api
-            .attestor_heartbeat(&at, message, signature)
+            .unsigned_attestor_heartbeat(&at, message, signature)
             .map_err(|e| Error {
                 code: ErrorCode::ServerError(RUNTIME_ERROR),
                 message: "Runtime unable to send heartbeat.".into(),

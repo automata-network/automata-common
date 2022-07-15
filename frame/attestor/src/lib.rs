@@ -23,6 +23,7 @@ pub mod pallet {
     };
     use frame_system::ensure_signed;
     use frame_system::pallet_prelude::OriginFor;
+    use frame_system::RawOrigin;
     use frame_system::{
         offchain::{SendTransactionTypes, SubmitTransaction},
         pallet_prelude::*,
@@ -36,6 +37,7 @@ pub mod pallet {
     use sp_runtime::{Percent, RuntimeDebug, SaturatedConversion};
     use sp_std::collections::{btree_map::BTreeMap, btree_set::BTreeSet};
     use sp_std::prelude::*;
+    use core::convert::{TryFrom, TryInto};
 
     #[cfg(feature = "std")]
     use serde::{Deserialize, Serialize};
@@ -88,6 +90,9 @@ pub mod pallet {
         // The expected attestor number for each application instance
         #[pallet::constant]
         type ExpectedAttestorNum: Get<u16>;
+
+        #[pallet::constant]
+        type AttestorNotifyTimeoutBlockNumber: Get<u32>;
 
         type ApplicationHandler: ApplicationTrait<AccountId = Self::AccountId>;
     }
@@ -166,7 +171,7 @@ pub mod pallet {
 
         fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
             match call {
-                Call::attestor_notify_chain(message, signature_raw_bytes) => {
+                Call::attestor_heartbeat(message, signature_raw_bytes) => {
                     // validate inputs
                     if message.len() != 40 {
                         return InvalidTransaction::Call.into();
@@ -177,7 +182,6 @@ pub mod pallet {
 
                     let pubkey = Public::from_raw(attestor.clone());
                     let signature = Signature::from_raw(signature_raw_bytes.clone());
-
                     #[cfg(feature = "full_crypto")]
                     if !Sr25519Pair::verify(&signature, message, &pubkey) {
                         return InvalidTransaction::Call.into();
@@ -205,7 +209,23 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_initialize(block_number: T::BlockNumber) -> Weight {
+            if let Ok(now) = TryInto::<BlockNumber>::try_into(block_number) {
+                let mut expired_attestors = Vec::<T::AccountId>::new();
+                for (key, notify) in <AttestorLastNotify<T>>::iter() {
+                    if notify + T::AttestorNotifyTimeoutBlockNumber::get() < now {
+                        expired_attestors.push(key);
+                    }
+                }
+                for key in expired_attestors {
+                    Self::attestor_remove(RawOrigin::Signed(key).into());
+                }
+            }
+            0
+        }
+    }
+
 
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
@@ -255,7 +275,6 @@ pub mod pallet {
 
             let mut attestor = [0u8; 32];
             attestor.copy_from_slice(&message[0..32]);
-            log::info!("1");
 
             let pubkey = Public::from_raw(attestor.clone());
             let signature = Signature::from_raw(signature_raw_bytes.clone());
@@ -266,8 +285,6 @@ pub mod pallet {
                 Error::<T>::InvalidNotification
             );
 
-            log::info!("2");
-
             let acc = T::AccountId::decode(&mut &attestor[..]).unwrap_or_default();
             ensure!(
                 <Attestors<T>>::contains_key(&acc),
@@ -277,8 +294,6 @@ pub mod pallet {
             let block_number =
                 <frame_system::Pallet<T>>::block_number().saturated_into::<BlockNumber>();
             <AttestorLastNotify<T>>::insert(&acc, block_number);
-
-            log::info!("3");
             Ok(().into())
         }
 
@@ -352,16 +367,16 @@ pub mod pallet {
             attestor_record.applications.insert(application_id.clone());
             Attestors::<T>::insert(&who, attestor_record);
 
-            let mut attestorsOfApplication = BTreeSet::<T::AccountId>::new();
+            let mut attestors = BTreeSet::<T::AccountId>::new();
             if AttestorsOfApplications::<T>::contains_key(&application_id) {
-                attestorsOfApplication = AttestorsOfApplications::<T>::get(&application_id);
+                attestors = AttestorsOfApplications::<T>::get(&application_id);
             }
-            attestorsOfApplication.insert(who.clone());
-            if attestorsOfApplication.len() as u16 == T::MinimumAttestorNum::get() {
+            attestors.insert(who.clone());
+            if attestors.len() as u16 == T::MinimumAttestorNum::get() {
                 T::ApplicationHandler::application_healthy(application_id.clone());
             }
 
-            AttestorsOfApplications::<T>::insert(&application_id, attestorsOfApplication);
+            AttestorsOfApplications::<T>::insert(&application_id, attestors);
 
             Self::deposit_event(Event::ApplicationAttested(application_id, who));
 
@@ -444,11 +459,11 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        pub fn unsigned_attestor_notify_chain(
+        pub fn unsigned_attestor_heartbeat(
             message: Vec<u8>,
             signature_raw_bytes: [u8; 64],
         ) -> Result<(), ()> {
-            let call = Call::attestor_notify_chain(message, signature_raw_bytes);
+            let call = Call::attestor_heartbeat(message, signature_raw_bytes);
             SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
         }
 
