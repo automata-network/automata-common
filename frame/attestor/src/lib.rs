@@ -15,7 +15,7 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
     use automata_traits::attestor::{ApplicationTrait, AttestorTrait};
-    use automata_traits::AttestorAccounting;
+    use core::convert::{TryFrom, TryInto};
     use frame_support::ensure;
     use frame_support::traits::{Currency, ReservableCurrency};
     use frame_support::{
@@ -37,7 +37,6 @@ pub mod pallet {
     use sp_runtime::{Percent, RuntimeDebug, SaturatedConversion};
     use sp_std::collections::{btree_map::BTreeMap, btree_set::BTreeSet};
     use sp_std::prelude::*;
-    use core::convert::{TryFrom, TryInto};
 
     #[cfg(feature = "std")]
     use serde::{Deserialize, Serialize};
@@ -81,8 +80,6 @@ pub mod pallet {
 
         type Call: From<Call<Self>>;
 
-        type AttestorAccounting: AttestorAccounting<AccountId = Self::AccountId>;
-
         // The monimum attestor number for each application instance
         #[pallet::constant]
         type MinimumAttestorNum: Get<u16>;
@@ -106,6 +103,11 @@ pub mod pallet {
     #[pallet::getter(fn attestors)]
     pub type Attestors<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, AttestorOf<T>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn attestors_whitelist)]
+    pub type AttestorsWhiteList<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, bool, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn geode_attestors)]
@@ -155,6 +157,8 @@ pub mod pallet {
     pub enum Error<T> {
         /// Use an invalid attestor id.
         InvalidAttestor,
+        /// Attestor not whitelisted.
+        AttestorNotWhitelisted,
         /// Attestor already registered.
         AlreadyRegistered,
         /// Invalid notification input.
@@ -226,12 +230,18 @@ pub mod pallet {
         }
     }
 
-
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::weight(0)]
+        pub fn attestor_set_whitelist(origin: OriginFor<T>, account: T::AccountId, whitelisted: bool) -> DispatchResultWithPostInfo{
+            ensure_root(origin)?;
+            <AttestorsWhiteList<T>>::insert(account, whitelisted);
+            Ok(().into())
+        }
+
         /// Register as an attestor.
         #[pallet::weight(0)]
         pub fn attestor_register(
@@ -244,7 +254,10 @@ pub mod pallet {
                 !<Attestors<T>>::contains_key(&who),
                 Error::<T>::AlreadyRegistered
             );
-            T::AttestorAccounting::attestor_staking(who.clone().into())?;
+            ensure!(
+                <AttestorsWhiteList<T>>::get(&who),
+                <Error<T>>::AttestorNotWhitelisted
+            );
 
             let attestor = AttestorOf::<T> {
                 url,
@@ -321,7 +334,6 @@ pub mod pallet {
                 Error::<T>::InvalidAttestor
             );
 
-            T::AttestorAccounting::attestor_unreserve(who.clone());
             let attestor_record = <Attestors<T>>::get(&who);
             for application_id in attestor_record.applications.iter() {
                 let mut attestors = AttestorsOfApplications::<T>::get(&application_id);

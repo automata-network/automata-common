@@ -13,6 +13,12 @@ fn it_works_for_attestor_register() {
         let min_stake = 100;
         let attestor_account = 1;
 
+        assert_ok!(AttestorModule::attestor_set_whitelist(
+            Origin::root(),
+            attestor_account,
+            true,
+        ));
+
         // successfully call register
         assert_ok!(AttestorModule::attestor_register(
             Origin::signed(attestor_account),
@@ -51,6 +57,13 @@ fn it_works_for_attestor_remove() {
         let min_stake = 100;
         let attestor_account = 1;
 
+
+        assert_ok!(AttestorModule::attestor_set_whitelist(
+            Origin::root(),
+            attestor_account,
+            true,
+        ));
+
         // successfully call register
         assert_ok!(AttestorModule::attestor_register(
             Origin::signed(attestor_account),
@@ -84,6 +97,13 @@ fn it_works_for_attestor_update() {
         let pubkey = vec![2];
         let min_stake = 100;
         let attestor_account = 1;
+
+
+        assert_ok!(AttestorModule::attestor_set_whitelist(
+            Origin::root(),
+            attestor_account,
+            true,
+        ));
 
         // successfully call register
         assert_ok!(AttestorModule::attestor_register(

@@ -8,6 +8,7 @@ pub mod pallet {
     use core::convert::TryInto;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
+    use sp_std::vec::Vec;
     use sp_core::U256;
 
     #[pallet::event]
@@ -25,7 +26,7 @@ pub mod pallet {
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
     pub struct Order<BlockNumber> {
-        pub binary: Vec<u8>,
+        pub binary: sp_std::vec::Vec<u8>,
         pub dns: Vec<u8>,
         pub name: Vec<u8>,
         // token num that users are willing to pay

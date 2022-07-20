@@ -398,7 +398,6 @@ impl pallet_attestor::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
-    type AttestorAccounting = pallet_accounting::Pallet<Self>;
     type MinimumAttestorNum = MinimumAttestorNum;
     type ExpectedAttestorNum = ExpectedAttestorNum;
     type HeartbeatTimeoutBlockNumber = AttestorHeartbeatTimeoutBlockNumber;

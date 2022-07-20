@@ -117,7 +117,6 @@ impl pallet_attestor::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
-    type AttestorAccounting = Test;
     type MinimumAttestorNum = MinimumAttestorNum;
     type ExpectedAttestorNum = ExpectedAttestorNum;
     type HeartbeatTimeoutBlockNumber = HeartbeatTimeoutBlockNumber;
@@ -200,6 +199,9 @@ pub fn register_attestor(
     let pubkey = vec![2];
     let min_stake = 100;
     let attestor_account = 1;
+
+    // successfully call register
+    AttestorModule::attestor_set_whitelist(Origin::root(), attestor_account, true)?;
 
     // successfully call register
     AttestorModule::attestor_register(

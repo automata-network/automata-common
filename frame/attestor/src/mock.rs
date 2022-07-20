@@ -11,7 +11,6 @@ use frame_support::dispatch::DispatchResult;
 use frame_support::dispatch::DispatchResultWithPostInfo;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-use automata_traits::AttestorAccounting;
 
 pub const INIT_BALANCE: u64 = 100_100_100;
 
@@ -78,16 +77,6 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
-impl AttestorAccounting for Test {
-    type AccountId = u64;
-    fn attestor_staking(who: Self::AccountId) -> DispatchResultWithPostInfo {
-        Ok(().into())
-    }
-    fn attestor_unreserve(who: Self::AccountId) -> DispatchResultWithPostInfo {
-        Ok(().into())
-    }
-}
-
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Test
 where
     Call: From<C>,
@@ -106,7 +95,6 @@ impl attestor::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
-    type AttestorAccounting = Test;
     type MinimumAttestorNum = MinimumAttestorNum;
     type ExpectedAttestorNum = ExpectedAttestorNum;
     type HeartbeatTimeoutBlockNumber = HeartbeatTimeoutBlockNumber;
