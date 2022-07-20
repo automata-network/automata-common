@@ -14,7 +14,7 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use automata_traits::attestor::ApplicationTrait;
+    use automata_traits::attestor::{ApplicationTrait, AttestorTrait};
     use automata_traits::AttestorAccounting;
     use frame_support::ensure;
     use frame_support::traits::{Currency, ReservableCurrency};
@@ -92,7 +92,7 @@ pub mod pallet {
         type ExpectedAttestorNum: Get<u16>;
 
         #[pallet::constant]
-        type AttestorNotifyTimeoutBlockNumber: Get<u32>;
+        type HeartbeatTimeoutBlockNumber: Get<u32>;
 
         type ApplicationHandler: ApplicationTrait<AccountId = Self::AccountId>;
     }
@@ -192,7 +192,7 @@ pub mod pallet {
                         return InvalidTransaction::Call.into();
                     }
 
-                    ValidTransaction::with_tag_prefix("Automata/attestor/notify")
+                    ValidTransaction::with_tag_prefix("Automata/attestor/heartbeat")
                         .priority(UNSIGNED_TXS_PRIORITY)
                         .and_provides((
                             attestor,
@@ -214,7 +214,7 @@ pub mod pallet {
             if let Ok(now) = TryInto::<BlockNumber>::try_into(block_number) {
                 let mut expired_attestors = Vec::<T::AccountId>::new();
                 for (key, notify) in <AttestorLastNotify<T>>::iter() {
-                    if notify + T::AttestorNotifyTimeoutBlockNumber::get() < now {
+                    if notify + T::HeartbeatTimeoutBlockNumber::get() < now {
                         expired_attestors.push(key);
                     }
                 }
@@ -422,40 +422,6 @@ pub mod pallet {
 
             Ok(().into())
         }
-
-        #[pallet::weight(0)]
-        pub fn attestor_notify_chain(
-            _origin: OriginFor<T>,
-            message: Vec<u8>,
-            signature_raw_bytes: [u8; 64],
-        ) -> DispatchResultWithPostInfo {
-            // validate inputs
-            ensure!(message.len() == 40, Error::<T>::InvalidNotification);
-
-            let mut attestor = [0u8; 32];
-            attestor.copy_from_slice(&message[0..32]);
-
-            let pubkey = Public::from_raw(attestor.clone());
-            let signature = Signature::from_raw(signature_raw_bytes.clone());
-
-            #[cfg(feature = "full_crypto")]
-            ensure!(
-                Sr25519Pair::verify(&signature, message, &pubkey),
-                Error::<T>::InvalidNotification
-            );
-
-            let acc = T::AccountId::decode(&mut &attestor[..]).unwrap_or_default();
-            ensure!(
-                <Attestors<T>>::contains_key(&acc),
-                Error::<T>::InvalidAttestor
-            );
-
-            let block_number =
-                <frame_system::Pallet<T>>::block_number().saturated_into::<BlockNumber>();
-            <AttestorLastNotify<T>>::insert(&acc, block_number);
-
-            Ok(().into())
-        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -556,6 +522,12 @@ pub mod pallet {
                 res.push(app_id.clone());
             }
             res
+        }
+    }
+
+    impl<T: Config> AttestorTrait for Pallet<T> {
+        fn is_abnormal_mode() -> bool {
+            false
         }
     }
 

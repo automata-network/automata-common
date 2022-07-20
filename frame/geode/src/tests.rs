@@ -17,6 +17,7 @@ fn it_works_register_geode() {
         let geode: pallet_geode::Geode<
             <Test as frame_system::Config>::AccountId,
             <Test as frame_system::Config>::Hash,
+            <Test as frame_system::Config>::BlockNumber,
         > = pallet_geode::Geode {
             id: geode_id,
             provider: provider,
@@ -45,6 +46,7 @@ fn it_works_geode_remove() {
         let geode: pallet_geode::Geode<
             <Test as frame_system::Config>::AccountId,
             <Test as frame_system::Config>::Hash,
+            <Test as frame_system::Config>::BlockNumber,
         > = pallet_geode::Geode {
             id: geode_id,
             provider: provider,
@@ -185,7 +187,7 @@ fn it_works_states() {
 
         // pending -> working
         {
-            assert_ok!(GeodeModule::geode_ready(origin.clone(), geode_id, order_id));
+            assert_ok!(GeodeModule::geode_ready(Origin::signed(geode_id), order_id));
             let geode = GeodeModule::geodes(geode_id).unwrap();
             assert_eq!(
                 geode.working_state,
@@ -199,8 +201,7 @@ fn it_works_states() {
         // working -> finalizing
         {
             assert_ok!(GeodeModule::geode_finalizing(
-                origin.clone(),
-                geode_id,
+                Origin::signed(geode_id),
                 order_id
             ));
             let geode = GeodeModule::geodes(geode_id).unwrap();
@@ -213,8 +214,7 @@ fn it_works_states() {
         // finalizing -> idle
         {
             assert_ok!(GeodeModule::geode_finalized(
-                origin.clone(),
-                geode_id,
+                Origin::signed(geode_id),
                 order_id
             ));
             let geode = GeodeModule::geodes(geode_id).unwrap();

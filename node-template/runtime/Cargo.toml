@@ -55,6 +55,7 @@ pallet-geodesession = { version = "0.1.0", default-features = false, path = "../
 pallet-geode = { version = "0.1.0", default-features = false, path = "../../frame/geode" }
 pallet-attestor = { version = "0.1.0", default-features = false, path = "../../frame/attestor" }
 pallet-accounting = { version = "0.1.0", default-features = false, path = "../../frame/accounting" }
+pallet-order = { version = "0.1.0", default-features = false, path = "../../frame/order" }
 
 [build-dependencies]
 substrate-wasm-builder = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }

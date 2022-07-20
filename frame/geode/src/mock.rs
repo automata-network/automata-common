@@ -110,6 +110,7 @@ where
 parameter_types! {
     pub const MinimumAttestorNum: u16 = 1;
     pub const ExpectedAttestorNum: u16 = 2;
+    pub const HeartbeatTimeoutBlockNumber: u32 = 32;
 }
 
 impl pallet_attestor::Config for Test {
@@ -119,6 +120,7 @@ impl pallet_attestor::Config for Test {
     type AttestorAccounting = Test;
     type MinimumAttestorNum = MinimumAttestorNum;
     type ExpectedAttestorNum = ExpectedAttestorNum;
+    type HeartbeatTimeoutBlockNumber = HeartbeatTimeoutBlockNumber;
     type ApplicationHandler = Test;
 }
 
@@ -134,6 +136,24 @@ impl automata_traits::attestor::ApplicationTrait for Test {
     }
 }
 
+impl automata_traits::attestor::AttestorTrait for Test {
+    fn is_abnormal_mode() -> bool {
+        false
+    }
+}
+
+impl automata_traits::order::OrderTrait for Test {
+    type BlockNumber = u64;
+    type Hash = H256;
+    fn is_order_expired(
+        order_id: Self::Hash,
+        block_height: Self::BlockNumber,
+        session_index: Self::BlockNumber,
+    ) -> bool {
+        false
+    }
+}
+
 parameter_types! {
     pub const DispatchConfirmationTimeout: BlockNumber = 12;
     pub const PutOnlineTimeout: BlockNumber = 40;
@@ -142,6 +162,8 @@ parameter_types! {
 
 impl pallet_geode::Config for Test {
     type Event = Event;
+    type AttestorHandler = Test;
+    type OrderHandler = Test;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -191,10 +213,7 @@ pub fn provider_register_geode(
     provider: <Test as system::Config>::AccountId,
     geode_id: <Test as system::Config>::AccountId,
 ) -> DispatchResultWithPostInfo {
-    let geode: pallet_geode::Geode<
-        <Test as system::Config>::AccountId,
-        <Test as system::Config>::Hash,
-    > = pallet_geode::Geode {
+    let geode: pallet_geode::GeodeOf<Test> = pallet_geode::Geode {
         id: geode_id,
         provider,
         order_id: None,

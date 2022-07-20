@@ -12,5 +12,5 @@ pub trait ApplicationTrait {
 }
 
 pub trait AttestorTrait {
-
+    fn is_abnormal_mode() -> bool;
 }

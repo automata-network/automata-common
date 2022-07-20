@@ -7,6 +7,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
+use frame_support::dispatch::DispatchResult;
 use frame_support::dispatch::DispatchResultWithPostInfo;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -95,11 +96,33 @@ where
     type OverarchingCall = Call;
 }
 
+parameter_types! {
+    pub const MinimumAttestorNum: u16 = 1;
+    pub const ExpectedAttestorNum: u16 = 3;
+    pub const HeartbeatTimeoutBlockNumber: u32 = 10;
+}
+
 impl attestor::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
     type AttestorAccounting = Test;
+    type MinimumAttestorNum = MinimumAttestorNum;
+    type ExpectedAttestorNum = ExpectedAttestorNum;
+    type HeartbeatTimeoutBlockNumber = HeartbeatTimeoutBlockNumber;
+    type ApplicationHandler = Test;
+}
+
+impl automata_traits::attestor::ApplicationTrait for Test {
+    type AccountId = u64;
+
+    fn application_unhealthy(who: Self::AccountId) -> DispatchResult {
+        Ok(().into())
+    }
+
+    fn application_healthy(who: Self::AccountId) -> DispatchResult {
+        Ok(().into())
+    }
 }
 
 // Build genesis storage according to the mock runtime.

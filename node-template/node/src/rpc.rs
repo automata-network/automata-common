@@ -9,19 +9,17 @@ use std::sync::Arc;
 
 use jsonrpc_core::{Error, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use jsonrpc_pubsub::manager::{SubscriptionManager, RandomStringIdProvider};
+use jsonrpc_pubsub::manager::{RandomStringIdProvider, SubscriptionManager};
 use node_template_runtime::{opaque::Block, AccountId, Balance, Index};
+use sc_client_api::client::BlockchainEvents;
 use sc_rpc::SubscriptionTaskExecutor;
 pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
-use sc_client_api::client::BlockchainEvents;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_runtime::{traits::Block as BlockT, RuntimeDebug};
 use sp_std::prelude::*;
-
-const RUNTIME_ERROR: i64 = 1;
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -47,6 +45,7 @@ where
     C::Api: BlockBuilder<Block>,
     // C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
     C::Api: node_template_runtime::AttestorApi<Block>,
+    C::Api: node_template_runtime::GeodeApi<Block>,
     C: BlockchainEvents<Block>,
     P: TransactionPool + 'static,
 {
@@ -85,13 +84,7 @@ where
     )));
 
     use super::rpc_geode::{GeodeApi, GeodeServer};
-    io.extend_with(GeodeServer::to_delegate(GeodeApi::new(
-        client.clone(),
-        SubscriptionManager::with_id_provider(
-            RandomStringIdProvider::default(),
-            Arc::new(subscription_task_executor),
-        ),
-    )));
+    io.extend_with(GeodeServer::to_delegate(GeodeApi::new(client.clone())));
 
     io
 }

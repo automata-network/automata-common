@@ -4160,6 +4160,7 @@ dependencies = [
  "pallet-geodesession",
  "pallet-gmetadata",
  "pallet-grandpa",
+ "pallet-order",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-template",
@@ -4637,6 +4638,22 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-order"
+version = "0.1.0"
+dependencies = [
+ "automata-primitives",
+ "automata-traits",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
  "sp-std",
 ]
 
