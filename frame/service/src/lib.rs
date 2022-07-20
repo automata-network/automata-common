@@ -34,11 +34,8 @@ pub mod pallet {
         pub dns: Vec<u8>,
         /// Service name.
         pub name: Option<Vec<u8>>,
-        // token num that users are willing to pay
-        pub price: u256,
-        pub start_session_id: u32,
-        // session num
-        pub duration: u32,
+        /// duration to be served, none means run endless until removed
+        pub duration: BlockNumber,
         /// maximum number of geodes to serve the order
         pub geode_num: u32,
     }

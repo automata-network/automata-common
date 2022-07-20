@@ -142,11 +142,7 @@ impl automata_traits::attestor::AttestorTrait for Test {
 impl automata_traits::order::OrderTrait for Test {
     type BlockNumber = u64;
     type Hash = H256;
-    fn is_order_expired(
-        order_id: Self::Hash,
-        block_height: Self::BlockNumber,
-        session_index: Self::BlockNumber,
-    ) -> bool {
+    fn is_order_expired(_order_id: Self::Hash, _session_index: Self::BlockNumber) -> bool {
         false
     }
 }

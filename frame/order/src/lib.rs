@@ -67,7 +67,6 @@ pub mod pallet {
         type BlockNumber = T::BlockNumber;
         fn is_order_expired(
             _order_id: Self::Hash,
-            _block_height: Self::BlockNumber,
             _session_index: Self::BlockNumber,
         ) -> bool {
             false

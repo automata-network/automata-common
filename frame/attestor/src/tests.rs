@@ -1,8 +1,8 @@
+use crate::mock::*;
+use crate::Attestor;
 use frame_support::assert_ok;
 use frame_system::pallet_prelude::*;
 use hex_literal::hex;
-use crate::mock::*;
-use crate::Attestor;
 use primitives::AccountId;
 
 #[test]
@@ -57,7 +57,6 @@ fn it_works_for_attestor_remove() {
         let min_stake = 100;
         let attestor_account = 1;
 
-
         assert_ok!(AttestorModule::set_whitelist(
             Origin::root(),
             attestor_account,
@@ -97,7 +96,6 @@ fn it_works_for_attestor_update() {
         let pubkey = vec![2];
         let min_stake = 100;
         let attestor_account = 1;
-
 
         assert_ok!(AttestorModule::set_whitelist(
             Origin::root(),

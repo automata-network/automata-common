@@ -189,13 +189,7 @@ fn it_works_states() {
         {
             assert_ok!(GeodeModule::geode_ready(Origin::signed(geode_id), order_id));
             let geode = GeodeModule::geodes(geode_id).unwrap();
-            assert_eq!(
-                geode.working_state,
-                WorkingState::Working {
-                    session_index,
-                    block_number
-                }
-            );
+            assert_eq!(geode.working_state, WorkingState::Working { session_index });
         }
 
         // working -> finalizing

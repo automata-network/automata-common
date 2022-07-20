@@ -27,8 +27,7 @@ pub mod pallet {
         pallet_prelude::*,
     };
     use sp_core::sr25519::{Public, Signature};
-    use sp_core::H256;
-    use sp_runtime::{Percent, RuntimeDebug, SaturatedConversion};
+    use sp_runtime::RuntimeDebug;
     use sp_std::collections::btree_map::BTreeMap;
     use sp_std::prelude::*;
 
@@ -58,17 +57,14 @@ pub mod pallet {
         /// The geode has been dispatched an order and is doing the preparation work
         Pending { session_index: BlockNumber },
         /// The geode is on service now
-        Working {
-            session_index: BlockNumber,
-            block_number: BlockNumber,
-        },
+        Working { session_index: BlockNumber },
         /// The geode is on the progress of finishing the service
         /// maybe doing something like backup the data, uninstall the binary...
         Finalizing { session_index: BlockNumber },
         /// The geode is trying to exit, we should not dispatch orders to it
         Exiting,
         /// The geode has exited successfully, and it can shutdown at any time
-        Exited { block_height: BlockNumber },
+        Exited { session_index: BlockNumber },
     }
 
     impl<BlockNumber> Default for WorkingState<BlockNumber> {
@@ -278,12 +274,7 @@ pub mod pallet {
                             geode.order_id == Some(order_id),
                             Error::<T>::OrderIdNotMatch
                         );
-                        let block_number = <frame_system::Pallet<T>>::block_number()
-                            .saturated_into::<T::BlockNumber>();
-                        geode.working_state = WorkingState::Working {
-                            session_index,
-                            block_number,
-                        };
+                        geode.working_state = WorkingState::Working { session_index };
                     }
                     _ => {
                         return Err(Error::<T>::NotPendingState.into());
@@ -320,7 +311,7 @@ pub mod pallet {
                     geode.order_id == Some(order_id),
                     Error::<T>::OrderIdNotMatch
                 );
-                if let WorkingState::Working { session_index, .. } = geode.working_state {
+                if let WorkingState::Working { session_index } = geode.working_state {
                     geode.working_state = WorkingState::Finalizing { session_index };
                 } else {
                     return Err(Error::<T>::NotWorkingState.into());
@@ -519,10 +510,10 @@ pub mod pallet {
 
         // Check the working geode, if it has finished the order, transist its working state to Finalizing.
         // Exiting -> Exited: In the beginning of session, if geode is in Exting state, will be transisted to Exited state.
-        fn on_new_session(block_height: Self::BlockNumber, session_index: Self::BlockNumber) {
+        fn on_new_session(session_index: Self::BlockNumber) {
             for (geode_id, mut geode) in <Geodes<T>>::iter() {
                 if geode.working_state == WorkingState::Exiting {
-                    geode.working_state = WorkingState::Exited { block_height };
+                    geode.working_state = WorkingState::Exited { session_index };
                     <Geodes<T>>::insert(geode_id, geode);
                 }
             }
@@ -615,8 +606,8 @@ pub mod pallet {
         //    in the future, we need to slash the binary provider and prevent the binary from used by other users.
         // 2. Check the Finalizing geode list? But I don't know how to handle the finalize timeout case,
         //    maybe don't process it now.
-        fn on_expired_check(block_height: Self::BlockNumber, session_index: Self::BlockNumber) {
-            for (id, geode) in <Geodes<T>>::iter() {
+        fn on_expired_check(session_index: Self::BlockNumber) {
+            for (_, geode) in <Geodes<T>>::iter() {
                 match geode.working_state {
                     WorkingState::Idle => {}
                     WorkingState::Pending { .. } => {
@@ -624,11 +615,7 @@ pub mod pallet {
                             Some(order_id) => {
                                 // check whether it spend too much time in pending phase
                                 // get the timeout duration from order
-                                if <T::OrderHandler>::is_order_expired(
-                                    order_id,
-                                    block_height,
-                                    session_index,
-                                ) {
+                                if <T::OrderHandler>::is_order_expired(order_id, session_index) {
                                     // mark unhealthy
                                     // redispatch as an emergency order
                                 }

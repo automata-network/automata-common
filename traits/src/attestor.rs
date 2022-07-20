@@ -1,5 +1,4 @@
 use frame_support::dispatch::DispatchResult;
-use primitives::attestor::ReportType;
 
 pub trait ApplicationTrait {
     type AccountId;

@@ -3,7 +3,6 @@ pub trait OrderTrait {
     type Hash;
     fn is_order_expired(
         order_id: Self::Hash,
-        block_height: Self::BlockNumber,
         session_index: Self::BlockNumber,
     ) -> bool;
 }

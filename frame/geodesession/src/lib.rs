@@ -42,10 +42,10 @@ pub mod pallet {
             if block_height % T::Blocks::get() == 0u32.into() {
                 session_index += 1u32.into();
                 <SessionId<T>>::put(session_index);
-                T::GeodeHandler::on_new_session(block_height, session_index);
+                T::GeodeHandler::on_new_session(session_index);
 
                 T::GeodeHandler::on_geode_offline(session_index);
-                T::GeodeHandler::on_expired_check(block_height, session_index);
+                T::GeodeHandler::on_expired_check(session_index);
                 Self::deposit_event(<Event<T>>::NewSessionId(session_index.try_into().unwrap_or_default()));
             }
             0

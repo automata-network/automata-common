@@ -34,7 +34,7 @@ pub struct FullDeps<C, P> {
 /// Instantiate all full RPC extensions.
 pub fn create_full<C, P>(
     deps: FullDeps<C, P>,
-    subscription_task_executor: SubscriptionTaskExecutor,
+    _subscription_task_executor: SubscriptionTaskExecutor,
 ) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
 where
     C: ProvideRuntimeApi<Block>,
@@ -43,7 +43,6 @@ where
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: BlockBuilder<Block>,
-    // C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
     C::Api: node_template_runtime::AttestorApi<Block>,
     C::Api: node_template_runtime::GeodeApi<Block>,
     C: BlockchainEvents<Block>,
@@ -51,10 +50,6 @@ where
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
-    // use fc_rpc::{
-    //     EthApi, EthApiServer, EthDevSigner, EthPubSubApi, EthPubSubApiServer, EthSigner,
-    //     HexEncodedIdProvider, NetApi, NetApiServer, Web3Api, Web3ApiServer,
-    // };
 
     let mut io = jsonrpc_core::IoHandler::default();
     let FullDeps {
@@ -72,11 +67,6 @@ where
     io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
         client.clone(),
     )));
-
-    // Extend this RPC with a custom API by using the following syntax.
-    // `YourRpcStruct` should have a reference to a client, which is needed
-    // to call into the runtime.
-    // `io.extend_with(YourRpcTrait::to_delegate(YourRpcStruct::new(ReferenceToClient, ...)));`
 
     use super::rpc_attestor::{AttestorApi, AttestorServer};
     io.extend_with(AttestorServer::to_delegate(AttestorApi::new(
