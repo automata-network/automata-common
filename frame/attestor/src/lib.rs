@@ -80,14 +80,6 @@ pub mod pallet {
 
         type Call: From<Call<Self>>;
 
-        // The monimum attestor number for each application instance
-        #[pallet::constant]
-        type MinimumAttestorNum: Get<u16>;
-
-        // The expected attestor number for each application instance
-        #[pallet::constant]
-        type ExpectedAttestorNum: Get<u16>;
-
         #[pallet::constant]
         type HeartbeatTimeoutBlockNumber: Get<u32>;
 
@@ -97,6 +89,26 @@ pub mod pallet {
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
+
+    #[pallet::storage]
+    #[pallet::getter(fn minimum_attestor_num)]
+    pub type MinimumAttestorNum<T: Config> =
+        StorageValue<_, u16, ValueQuery, DefaultMinimumAttestorNum<T>>;
+
+    #[pallet::type_value]
+    pub fn DefaultMinimumAttestorNum<T: Config>() -> u16 {
+        1
+    }
+
+    #[pallet::storage]
+    #[pallet::getter(fn expected_attestor_num)]
+    pub type ExpectedAttestorNum<T: Config> =
+        StorageValue<_, u16, ValueQuery, DefaultExpectedAttestorNum<T>>;
+
+    #[pallet::type_value]
+    pub fn DefaultExpectedAttestorNum<T: Config>() -> u16 {
+        2
+    }
 
     // The pallet's runtime storage items.
     #[pallet::storage]
@@ -236,9 +248,25 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(0)]
-        pub fn attestor_set_whitelist(origin: OriginFor<T>, account: T::AccountId, whitelisted: bool) -> DispatchResultWithPostInfo{
+        pub fn set_whitelist(
+            origin: OriginFor<T>,
+            account: T::AccountId,
+            whitelisted: bool,
+        ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             <AttestorsWhiteList<T>>::insert(account, whitelisted);
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn set_attestor_numbers(
+            origin: OriginFor<T>,
+            minimum: u16,
+            expected: u16,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            <MinimumAttestorNum<T>>::set(minimum);
+            <ExpectedAttestorNum<T>>::set(expected);
             Ok(().into())
         }
 
@@ -335,18 +363,17 @@ pub mod pallet {
             );
 
             let attestor_record = <Attestors<T>>::get(&who);
+            let minimum_attestor_num = <MinimumAttestorNum<T>>::get() as usize;
             for application_id in attestor_record.applications.iter() {
                 let mut attestors = AttestorsOfApplications::<T>::get(&application_id);
                 attestors.remove(&who);
-
                 if attestors.is_empty() {
                     AttestorsOfApplications::<T>::remove(&application_id);
                 } else {
                     AttestorsOfApplications::<T>::insert(&application_id, &attestors);
                 }
-
-                if T::MinimumAttestorNum::get() > attestors.len() as u16 {
-                    T::ApplicationHandler::application_unhealthy(application_id.clone());
+                if minimum_attestor_num > attestors.len() {
+                    let _ = T::ApplicationHandler::application_unhealthy(application_id.clone());
                 }
             }
 
@@ -384,8 +411,8 @@ pub mod pallet {
                 attestors = AttestorsOfApplications::<T>::get(&application_id);
             }
             attestors.insert(who.clone());
-            if attestors.len() as u16 == T::MinimumAttestorNum::get() {
-                T::ApplicationHandler::application_healthy(application_id.clone());
+            if attestors.len() as u16 == <MinimumAttestorNum<T>>::get() {
+                T::ApplicationHandler::application_healthy(application_id.clone())?;
             }
 
             AttestorsOfApplications::<T>::insert(&application_id, attestors);
@@ -401,7 +428,6 @@ pub mod pallet {
             application_id: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-
             ensure!(
                 Attestors::<T>::contains_key(&who),
                 Error::<T>::InvalidAttestor
@@ -416,8 +442,8 @@ pub mod pallet {
             let mut attestors = AttestorsOfApplications::<T>::get(&application_id);
             attestors.remove(&who);
 
-            if (attestors.len() as u16) < T::MinimumAttestorNum::get() {
-                T::ApplicationHandler::application_unhealthy(application_id.clone());
+            if (attestors.len() as u16) < <MinimumAttestorNum<T>>::get() {
+                T::ApplicationHandler::application_unhealthy(application_id.clone())?;
             }
 
             if attestors.is_empty() {
@@ -447,8 +473,8 @@ pub mod pallet {
 
         pub fn get_all_attestors() -> BTreeMap<T::AccountId, usize> {
             let mut result = BTreeMap::new();
-            let iterator = <Attestors<T>>::iter().map(|(accountId, attestor)| {
-                result.insert(accountId, attestor.applications.len());
+            let iterator = <Attestors<T>>::iter().map(|(account_id, attestor)| {
+                result.insert(account_id, attestor.applications.len());
             });
             result
         }
@@ -498,14 +524,14 @@ pub mod pallet {
 
             // clean GeodeAttestors
             {
-                let mut attestorsOfApplications = Vec::new();
+                let mut attestors_of_applications = Vec::new();
                 <AttestorsOfApplications<T>>::iter()
                     .map(|(key, _)| {
-                        attestorsOfApplications.push(key);
+                        attestors_of_applications.push(key);
                     })
                     .all(|_| true);
-                for geode_attestor in <AttestorsOfApplications<T>>::iter() {
-                    <AttestorsOfApplications<T>>::remove(geode_attestor.0);
+                for geode_attestor in attestors_of_applications {
+                    <AttestorsOfApplications<T>>::remove(geode_attestor);
                 }
             }
 

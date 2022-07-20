@@ -13,7 +13,7 @@ fn it_works_for_attestor_register() {
         let min_stake = 100;
         let attestor_account = 1;
 
-        assert_ok!(AttestorModule::attestor_set_whitelist(
+        assert_ok!(AttestorModule::set_whitelist(
             Origin::root(),
             attestor_account,
             true,
@@ -58,7 +58,7 @@ fn it_works_for_attestor_remove() {
         let attestor_account = 1;
 
 
-        assert_ok!(AttestorModule::attestor_set_whitelist(
+        assert_ok!(AttestorModule::set_whitelist(
             Origin::root(),
             attestor_account,
             true,
@@ -99,7 +99,7 @@ fn it_works_for_attestor_update() {
         let attestor_account = 1;
 
 
-        assert_ok!(AttestorModule::attestor_set_whitelist(
+        assert_ok!(AttestorModule::set_whitelist(
             Origin::root(),
             attestor_account,
             true,

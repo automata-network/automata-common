@@ -95,8 +95,6 @@ impl attestor::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
-    type MinimumAttestorNum = MinimumAttestorNum;
-    type ExpectedAttestorNum = ExpectedAttestorNum;
     type HeartbeatTimeoutBlockNumber = HeartbeatTimeoutBlockNumber;
     type ApplicationHandler = Test;
 }

@@ -9,7 +9,7 @@ use std::sync::Arc;
 const RUNTIME_ERROR: i64 = 1;
 
 #[rpc]
-/// Geode RPC methods
+/// Attestor RPC methods
 pub trait AttestorServer<BlockHash> {
     /// return the registered geode list
     #[rpc(name = "attestor_list")]

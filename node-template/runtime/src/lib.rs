@@ -349,48 +349,6 @@ where
 }
 
 parameter_types! {
-    pub const AttestorStakingAmount: Balance = 1000;
-    pub const GeodeStakingAmount: Balance = 1000;
-    pub const AttestorTotalReward: Balance = 1000;
-    pub const GeodeTotalReward: Balance = 1000;
-    pub const GeodeTerminatePenalty: Balance = 1000;
-    pub const GeodeMisconductForAttestor: Balance = 1000;
-    pub const GeodeMisconductForServiceUser: Balance = 1000;
-    pub const SlotLength: BlockNumber = 100;
-    pub const AttestorBasicRewardRatio: u8 = 1;
-    pub const CommissionRateForService: u8 = 1;
-    pub const CommissionRateForOnDemand: u8 = 1;
-    pub const AttestorRewardEachSlot: Balance = 1000;
-    pub const GeodeRewardEachSlot: Balance = 1000;
-}
-
-impl pallet_accounting::Config for Runtime {
-    type Event = Event;
-    type Currency = Balances;
-    type GetAttestors = Attestor;
-    type GetGeodes = Geode;
-    type AttestorStakingAmount = AttestorStakingAmount;
-    type GeodeStakingAmount = GeodeStakingAmount;
-    type AttestorTotalReward = AttestorTotalReward;
-    type GeodeTotalReward = GeodeTotalReward;
-    type GeodeTerminatePenalty = GeodeTerminatePenalty;
-
-    type GeodeMisconductForAttestor = GeodeMisconductForAttestor;
-    type GeodeMisconductForServiceUser = GeodeMisconductForServiceUser;
-
-    type SlotLength = SlotLength;
-
-    type AttestorBasicRewardRatio = AttestorBasicRewardRatio;
-    type CommissionRateForService = CommissionRateForService;
-    type CommissionRateForOnDemand = CommissionRateForOnDemand;
-
-    type AttestorRewardEachSlot = AttestorRewardEachSlot;
-    type GeodeRewardEachSlot = GeodeRewardEachSlot;
-}
-
-parameter_types! {
-    pub const MinimumAttestorNum: u16 = 1;
-    pub const ExpectedAttestorNum: u16 = 2;
     pub const AttestorHeartbeatTimeoutBlockNumber: u32 = 5;
 }
 
@@ -398,8 +356,6 @@ impl pallet_attestor::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
-    type MinimumAttestorNum = MinimumAttestorNum;
-    type ExpectedAttestorNum = ExpectedAttestorNum;
     type HeartbeatTimeoutBlockNumber = AttestorHeartbeatTimeoutBlockNumber;
     type ApplicationHandler = pallet_geode::Pallet<Self>;
 }
@@ -446,7 +402,6 @@ construct_runtime!(
         Game: pallet_game::{Pallet, Call, Storage, Event<T>},
         DAOPortal: pallet_daoportal::{Pallet, Call, Storage, Event<T>},
         Gmetadata: pallet_gmetadata::{Pallet, Call, Storage, Event<T>},
-        Accounting: pallet_accounting::{Pallet, Call, Storage, Event<T>},
         Attestor: pallet_attestor::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
         Geode: pallet_geode::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
         Order: pallet_order::{Pallet, Call, Storage, Event<T>},

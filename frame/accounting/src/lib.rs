@@ -64,6 +64,12 @@ pub mod pallet {
     #[pallet::getter(fn total_geode_distributed_reward)]
     pub type TotalGeodeDistributedReward<T: Config> = StorageValue<_, BalanceOf<T>>;
 
+    // The pallet's runtime storage items.
+    #[pallet::storage]
+    #[pallet::getter(fn attestors)]
+    pub type Attestors<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery>;
+
     #[pallet::event]
     #[pallet::metadata(T::BlockNumber = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -128,7 +134,6 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Reward attestors
         pub fn reward_attestors() {
-            return;
             /// Get all attestors and its verified geodes number
             let attestors = T::GetAttestors::get();
 
@@ -160,7 +165,6 @@ pub mod pallet {
         }
 
         pub fn reward_geodes() {
-            return;
             let geodes = T::GetGeodes::get();
 
             let geodes_len = geodes.len();
