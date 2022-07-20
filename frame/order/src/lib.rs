@@ -8,8 +8,8 @@ pub mod pallet {
     use core::convert::TryInto;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use sp_std::vec::Vec;
     use sp_core::U256;
+    use sp_std::vec::Vec;
 
     #[pallet::event]
     pub enum Event<T: Config> {}
@@ -65,10 +65,7 @@ pub mod pallet {
     impl<T: Config> automata_traits::order::OrderTrait for Pallet<T> {
         type Hash = T::Hash;
         type BlockNumber = T::BlockNumber;
-        fn is_order_expired(
-            _order_id: Self::Hash,
-            _session_index: Self::BlockNumber,
-        ) -> bool {
+        fn is_order_expired(_order_id: Self::Hash, _session_index: Self::BlockNumber) -> bool {
             false
         }
     }

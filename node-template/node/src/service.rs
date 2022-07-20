@@ -214,7 +214,10 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
                 deny_unsafe,
             };
 
-            Ok(crate::rpc::create_full(deps, subscription_task_executor.clone()))
+            Ok(crate::rpc::create_full(
+                deps,
+                subscription_task_executor.clone(),
+            ))
         })
     };
 

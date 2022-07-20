@@ -1,9 +1,8 @@
-
+use core::convert::TryFrom;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use core::convert::TryFrom;
+use sp_core::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
-use sp_core::{Encode, Decode};
 
 /// Reported geodes' state
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

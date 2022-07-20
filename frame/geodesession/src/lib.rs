@@ -46,7 +46,9 @@ pub mod pallet {
 
                 T::GeodeHandler::on_geode_offline(session_index);
                 T::GeodeHandler::on_expired_check(session_index);
-                Self::deposit_event(<Event<T>>::NewSessionId(session_index.try_into().unwrap_or_default()));
+                Self::deposit_event(<Event<T>>::NewSessionId(
+                    session_index.try_into().unwrap_or_default(),
+                ));
             }
             0
         }
