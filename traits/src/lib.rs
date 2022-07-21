@@ -2,6 +2,10 @@
 
 use frame_support::dispatch::DispatchResultWithPostInfo;
 
+pub mod attestor;
+pub mod geode;
+pub mod order;
+
 pub trait AttestorAccounting {
     type AccountId;
     fn attestor_staking(who: Self::AccountId) -> DispatchResultWithPostInfo;

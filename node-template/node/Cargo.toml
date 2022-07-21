@@ -39,21 +39,37 @@ sp-runtime = { git = 'https://github.com/automata-network/substrate.git', branch
 sp-timestamp = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 
 # These dependencies are used for the node template's RPCs
-jsonrpc-core = "15.1.0"
+jsonrpc-derive = '15.0.0'
+jsonrpc-core = "15.0.0"
+jsonrpc-core-client = "15.0.0"
+jsonrpc-pubsub = "15.0.0"
+
+fp-rpc = { default-features = false, git = 'https://github.com/automata-network/frontier', branch='master'}
+fc-rpc = { default-features = false, git = 'https://github.com/automata-network/frontier', branch='master'}
+fc-rpc-core = { default-features = false, git = 'https://github.com/automata-network/frontier', branch='master'}
+fc-db = { default-features = false, git = 'https://github.com/automata-network/frontier', branch='master'}
+
 sc-rpc = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sp-std = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 sp-api = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 sc-rpc-api = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 sp-blockchain = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sp-storage = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 sp-block-builder = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 sc-basic-authorship = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 substrate-frame-rpc-system = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 pallet-transaction-payment-rpc = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+futures = { version = "0.3.1", features = ["compat"] }
+futures-util = { version = "0.3.1", features = ["compat", "sink"] }
 
 # These dependencies are used for runtime benchmarking
 frame-benchmarking = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 frame-benchmarking-cli = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 
 node-template-runtime = { version = "3.0.0", path = "../runtime" }
+automata-primitives = { path = "../../primitives" }
+pallet-geode = { path = "../../frame/geode" }
+log = { version = "0.4.17" }
 
 [build-dependencies]
 substrate-build-script-utils = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }

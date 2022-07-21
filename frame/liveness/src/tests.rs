@@ -1,6 +1,7 @@
-use crate::{mock::*, Error, ReportType};
+use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 use pallet_attestor::Attestor;
+use primitives::attestor::ReportType;
 
 #[test]
 fn it_works_attestor_attest_geode() {
@@ -9,7 +10,7 @@ fn it_works_attestor_attest_geode() {
         let geode_account = 2;
 
         register_attestor(attestor_account);
-        provider_register_geode(attestor_account, geode_account);
+        assert_ok!(provider_register_geode(attestor_account, geode_account));
 
         assert_ok!(LivenessModule::attestor_attest_geode(
             Origin::signed(attestor_account),

@@ -1,8 +1,8 @@
-use crate::{Attestor, *};
+use crate::mock::*;
+use crate::Attestor;
 use frame_support::assert_ok;
 use frame_system::pallet_prelude::*;
 use hex_literal::hex;
-use mock::*;
 use primitives::AccountId;
 
 #[test]
@@ -12,6 +12,12 @@ fn it_works_for_attestor_register() {
         let pubkey = vec![2];
         let min_stake = 100;
         let attestor_account = 1;
+
+        assert_ok!(AttestorModule::set_whitelist(
+            Origin::root(),
+            attestor_account,
+            true,
+        ));
 
         // successfully call register
         assert_ok!(AttestorModule::attestor_register(
@@ -27,7 +33,7 @@ fn it_works_for_attestor_register() {
             Attestor {
                 url: url,
                 pubkey: pubkey,
-                geodes: Default::default(),
+                applications: Default::default(),
             }
         );
     });
@@ -51,6 +57,12 @@ fn it_works_for_attestor_remove() {
         let min_stake = 100;
         let attestor_account = 1;
 
+        assert_ok!(AttestorModule::set_whitelist(
+            Origin::root(),
+            attestor_account,
+            true,
+        ));
+
         // successfully call register
         assert_ok!(AttestorModule::attestor_register(
             Origin::signed(attestor_account),
@@ -62,7 +74,7 @@ fn it_works_for_attestor_remove() {
         events();
 
         // call remove
-        AttestorModule::attestor_remove(ensure_signed(Origin::signed(attestor_account)).unwrap());
+        AttestorModule::attestor_remove(Origin::signed(attestor_account));
         let data = AttestorModule::attestors(&attestor_account);
 
         // check the data after remove
@@ -71,7 +83,7 @@ fn it_works_for_attestor_remove() {
             Attestor {
                 url: vec![],
                 pubkey: vec![],
-                geodes: Default::default(),
+                applications: Default::default(),
             }
         );
     });
@@ -84,6 +96,12 @@ fn it_works_for_attestor_update() {
         let pubkey = vec![2];
         let min_stake = 100;
         let attestor_account = 1;
+
+        assert_ok!(AttestorModule::set_whitelist(
+            Origin::root(),
+            attestor_account,
+            true,
+        ));
 
         // successfully call register
         assert_ok!(AttestorModule::attestor_register(
@@ -100,7 +118,7 @@ fn it_works_for_attestor_update() {
             Attestor {
                 url: url,
                 pubkey: pubkey.clone(),
-                geodes: Default::default(),
+                applications: Default::default(),
             }
         );
 
@@ -121,7 +139,7 @@ fn it_works_for_attestor_update() {
             Attestor {
                 url: new_url,
                 pubkey: pubkey,
-                geodes: Default::default(),
+                applications: Default::default(),
             }
         );
     });

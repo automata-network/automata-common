@@ -10,723 +10,755 @@ mod tests;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use automata_traits::GeodeAccounting;
-    use codec::{Decode, Encode};
-    use core::convert::TryInto;
-    use frame_support::ensure;
-    use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
-    use primitives::BlockNumber;
-    use sp_runtime::{RuntimeDebug, SaturatedConversion};
-    use sp_std::{collections::btree_map::BTreeMap, prelude::*};
+    use automata_traits::attestor::AttestorTrait;
+    use automata_traits::order::OrderTrait;
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo,
+        ensure,
+        pallet_prelude::{OptionQuery, StorageMap, ValueQuery},
+        Blake2_128Concat,
+    };
+    use frame_support::{pallet_prelude::*, unsigned::ValidateUnsigned};
+
+    use frame_system::RawOrigin;
+    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{
+        offchain::{SendTransactionTypes, SubmitTransaction},
+        pallet_prelude::*,
+    };
+    use sp_core::sr25519::{Public, Signature};
+    use sp_runtime::RuntimeDebug;
+    use sp_std::collections::btree_map::BTreeMap;
+    use sp_std::prelude::*;
 
     #[cfg(feature = "std")]
     use serde::{Deserialize, Serialize};
 
-    /// Geode state
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-    pub enum GeodeState {
-        /// The init state when provider register the geode.
-        Registered,
-        /// When geode get enough attestors' attestation, it turns to Attested.
-        Attested,
-        /// When a geode is instantiated with an order
-        Instantiated,
-        /// Unknown state
-        Unknown,
-        /// When the geode is offline
-        Offline,
-        /// When a geode is instantiated but lacking of attestor attesting it
-        Degraded,
-        /// Not available
-        Null,
+    pub enum HealthyState {
+        /// Less than required attestors approved that the geode is healthy
+        Unhealthy,
+        /// More than required attestors approved that the geode is healthy
+        Healthy,
     }
 
-    impl Default for GeodeState {
+    impl Default for HealthyState {
         fn default() -> Self {
-            GeodeState::Null
+            Self::Unhealthy
         }
     }
 
-    /// The geode struct shows its status
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+    pub enum WorkingState<BlockNumber> {
+        /// The geode is not on service and ready to be dispatched an order
+        Idle,
+        /// The geode has been dispatched an order and is doing the preparation work
+        Pending { session_index: BlockNumber },
+        /// The geode is on service now
+        Working { session_index: BlockNumber },
+        /// The geode is on the progress of finishing the service
+        /// maybe doing something like backup the data, uninstall the binary...
+        Finalizing { session_index: BlockNumber },
+        /// The geode is trying to exit, we should not dispatch orders to it
+        Exiting,
+        /// The geode has exited successfully, and it can shutdown at any time
+        Exited { session_index: BlockNumber },
+    }
+
+    impl<BlockNumber> Default for WorkingState<BlockNumber> {
+        fn default() -> Self {
+            Self::Idle
+        }
+    }
+
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
-    pub struct Geode<AccountId, Hash> {
-        /// Geode id.
-        pub id: AccountId,
-        /// Provider id
-        pub provider: AccountId,
-        /// Assigned order hash
-        pub order: Option<(Hash, Option<BlockNumber>)>,
-        /// Geode's public ip.
-        pub ip: Vec<u8>,
-        /// Geode's dns.
-        pub dns: Vec<u8>,
-        /// Geodes' properties
-        pub props: BTreeMap<Vec<u8>, Vec<u8>>,
-        /// Current state of the geode
-        pub state: GeodeState,
-        /// promise to be online until which block
-        pub promise: BlockNumber,
+    pub struct FailReason {
+        pub reason: Vec<u8>,
     }
 
-    pub type GeodeOf<T> =
-        Geode<<T as frame_system::Config>::AccountId, <T as frame_system::Config>::Hash>;
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
+    pub struct Geode<AccountId, Hash, BlockNumber> {
+        /// Id of geode, the key pair will be generate in enclave
+        pub id: AccountId,
+        /// Account of the machain provider
+        pub provider: AccountId,
+        pub ip: Vec<u8>,
+        pub domain: Vec<u8>,
+        /// Extra properties
+        pub props: BTreeMap<Vec<u8>, Vec<u8>>,
+        // mark by attestor
+        pub healthy_state: HealthyState,
+        // mark by geode session
+        pub working_state: WorkingState<BlockNumber>,
+        /// Hash of the current order, set on pending
+        pub order_id: Option<Hash>,
+    }
+
+    pub type GeodeOf<T> = Geode<
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::Hash,
+        <T as frame_system::Config>::BlockNumber,
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn geodes)]
+    pub type Geodes<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, GeodeOf<T>>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn offline_requests)]
+    pub type OfflineRequests<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn fail_requests)]
+    pub type FailRequests<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, FailReason, OptionQuery>;
+
+    pub const UNSIGNED_TXS_PRIORITY: u64 = 100;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_attestor::Config {
+    pub trait Config: SendTransactionTypes<Call<Self>> + frame_system::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        type GeodeAccounting: GeodeAccounting<AccountId = Self::AccountId>;
-
-        #[pallet::constant]
-        type DispatchConfirmationTimeout: Get<BlockNumber>;
-
-        #[pallet::constant]
-        type PutOnlineTimeout: Get<BlockNumber>;
-
-        #[pallet::constant]
-        type AttestationExpiryBlockNumber: Get<BlockNumber>;
-    }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        // /// 1. At every block, check if any promise already expired
-        // fn on_initialize(block_number: T::BlockNumber) -> Weight {
-        //     if let Ok(now) = TryInto::<BlockNumber>::try_into(block_number) {
-        //         // clean expired promised geodes
-        //         let mut expired = Vec::<BlockNumber>::new();
-        //         for (promise, _geodes) in <PromisedGeodes<T>>::iter() {
-        //             if promise != 0
-        //                 && promise
-        //                     <= now
-        //                         + T::DispatchConfirmationTimeout::get()
-        //                         + T::PutOnlineTimeout::get()
-        //             {
-        //                 expired.push(promise);
-        //             } else {
-        //                 break;
-        //             }
-        //         }
-        //         for promise in expired {
-        //             <PromisedGeodes<T>>::remove(promise);
-        //         }
-        //     }
-        //     0
-        // }
+        type AttestorHandler: AttestorTrait<AccountId = Self::AccountId>;
+        type OrderHandler: OrderTrait<BlockNumber = Self::BlockNumber, Hash = Self::Hash>;
     }
 
     #[pallet::event]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
     #[pallet::metadata(T::AccountId = "AccountId")]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Provider register geode. \[provider_id, geode_id\]
-        GeodeRegister(T::AccountId, T::AccountId),
-        /// A geode is removed. \[geode_id\]
-        GeodeRemove(T::AccountId),
-        /// Geode's record updated. \[geode_id\]
-        GeodeUpdate(T::AccountId),
-        /// Geode's props updated. \[geode_id\]
-        PropsUpdate(T::AccountId),
-        /// Geode's props updated. \[geode_id\]
-        DnsUpdate(T::AccountId),
-        /// Event documentation should end with an array that provides descriptive names for event
-        /// parameters. [something, who]
-        SomethingStored(u32, T::AccountId),
-        /// Geode's state updated
-        GeodeStateUpdate(T::AccountId, GeodeState),
-        /// Geode's promise updated
-        GeodePromiseUpdate(T::AccountId, BlockNumber),
+        RegisterGeode(T::AccountId),
+        RemoveGeode(T::AccountId),
     }
 
     #[pallet::error]
     pub enum Error<T> {
-        /// Duplicate register geode.
-        AlreadyGeode,
-        /// Use an invalid geode id.
-        InvalidGeode,
-        /// The GeodeState can't allow you to do something now.
-        InvalidGeodeState,
-        /// You doesn't have the right to do what you want.
-        NoRight,
-        /// The geode is in work so you can't do this.
-        GeodeInWork,
-        /// The geode is in the market so you can't do this.
-        GeodeInOrder,
-        /// Invalid input
-        InvalidInput,
-        /// Invalid promise
-        InvalidPromise,
-        /// Invalid state transition
-        InvalidTransition,
+        // Another geode provider tried to register a geode whose id is the same with an registered geode
+        DuplicateGeodeId,
+        // A existing geode tried to register again, but the previous working state is not `Exited`.
+        StateNotExited,
+        // Someone try to remove an nonexistent geode
+        NonexistentGeode,
+        // The origin is not owner of this geode
+        NotOwner,
+        GeodeNotHealthy,
+        NotFinalizingState,
+        NotPendingState,
+        NotWorkingState,
+        OrderIdNotMatch,
+        // invalid state
+        InvalidState,
+        InvalidSignature,
+        InvalidMessage,
     }
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
-    #[pallet::storage]
-    #[pallet::getter(fn geodes)]
-    pub type Geodes<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, GeodeOf<T>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn promised_geodes)]
-    pub type PromisedGeodes<T: Config> =
-        StorageMap<_, Blake2_128Concat, BlockNumber, Vec<T::AccountId>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn registered_geode_ids)]
-    pub type RegisteredGeodes<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumber, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn attested_geodes_ids)]
-    pub type AttestedGeodes<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumber, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn instantiated_geodes_ids)]
-    pub type InstantiatedGeodes<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumber, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn degraded_instantiated_geodes_ids)]
-    pub type DegradedGeodes<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumber, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn offline_geodes_ids)]
-    pub type OfflineGeodes<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumber, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn unknown_geodes_ids)]
-    pub type UnknownGeodes<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumber, ValueQuery>;
-
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Called by provider to register a geode. The user/attestors/state/provider will be
-        /// set automatically regardless of what you set.
+        /// Called when geode want to register itself on chain.
+        /// working: not_exist | exited
+        /// healthy: unlimited
+        /// Callee: geode_provider
         #[pallet::weight(0)]
-        pub fn provider_register_geode(
+        pub fn register_geode(
             origin: OriginFor<T>,
-            geode_record: GeodeOf<T>,
+            geode: GeodeOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-
-            if <Geodes<T>>::contains_key(&geode_record.id) {
-                let mut geode = <Geodes<T>>::get(geode_record.id);
-                ensure!(geode.provider == who, Error::<T>::NoRight);
-                ensure!(
-                    geode.state == GeodeState::Offline,
-                    Error::<T>::InvalidGeodeState
-                );
-                geode.order = None;
-                match Self::transit_state(&geode, GeodeState::Registered) {
-                    true => {
-                        return Ok(().into());
-                    }
-                    false => {
-                        return Err(Error::<T>::InvalidTransition.into());
+            match <Geodes<T>>::get(&geode.id) {
+                Some(mut existing_geode) => {
+                    // If there is already a geode record, should check its working state
+                    // Only `Exited` state geode is allowed to register again
+                    ensure!(existing_geode.provider == who, Error::<T>::DuplicateGeodeId);
+                    if let WorkingState::Exited { .. } = existing_geode.working_state {
+                        existing_geode.working_state = WorkingState::Idle;
+                        <Geodes<T>>::insert(geode.id.clone(), existing_geode);
+                    } else {
+                        return Err(Error::<T>::StateNotExited.into());
                     }
                 }
-            } else {
-                let mut geode_record = geode_record;
-                let geode = geode_record.id.clone();
-
-                let block_number =
-                    <frame_system::Module<T>>::block_number().saturated_into::<BlockNumber>();
-                geode_record.state = GeodeState::Registered;
-                geode_record.provider = who.clone();
-                T::GeodeAccounting::geode_staking(who.clone())?;
-
-                <Geodes<T>>::insert(&geode, &geode_record);
-                <RegisteredGeodes<T>>::insert(&geode, &block_number);
-
-                Self::deposit_event(Event::GeodeRegister(who, geode));
+                None => {
+                    // Register a new geode instance
+                    let mut geode_record = geode.clone();
+                    geode_record.working_state = WorkingState::Idle;
+                    geode_record.healthy_state =
+                        if <T::AttestorHandler>::check_healthy(&geode_record.id) {
+                            HealthyState::Healthy
+                        } else {
+                            HealthyState::Unhealthy
+                        };
+                    geode_record.provider = who;
+                    geode_record.order_id = None;
+                    <Geodes<T>>::insert(geode_record.id.clone(), geode_record);
+                }
             }
-
+            Self::deposit_event(Event::RegisterGeode(geode.id));
             Ok(().into())
         }
 
-        /// Called by provider to remove geode .
+        /// Called when geode want to remove itself.
+        /// Once the function is called and its working state is `Idle`, the state will be changed to `Exiting` during the offline phase of next session.
+        /// If the current working state is not `Idle`, need to wait until it changes to `Idle`.
+        /// Callee: geode_provider
         #[pallet::weight(0)]
-        pub fn geode_remove(
+        pub fn remove_geode(
             origin: OriginFor<T>,
-            geode: T::AccountId,
+            geode_id: T::AccountId,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            ensure!(<Geodes<T>>::contains_key(&geode), Error::<T>::InvalidGeode);
-            let geode = <Geodes<T>>::get(geode);
-            ensure!(geode.provider == who, Error::<T>::NoRight);
-
-            match Self::transit_state(&geode, GeodeState::Null) {
-                true => {
-                    T::GeodeAccounting::geode_unreserve(who)?;
-                    Ok(().into())
-                }
-                false => Err(Error::<T>::InvalidTransition.into()),
-            }
+            let _ = Self::get_geode_and_check_provider(origin, &geode_id)?;
+            <OfflineRequests<T>>::insert(geode_id.clone(), geode_id.clone());
+            Self::deposit_event(Event::RemoveGeode(geode_id));
+            Ok(().into())
         }
 
-        /// Called by provider to update geode properties
+        /// Update a property of the geode.
+        /// Callee: geode
         #[pallet::weight(0)]
         pub fn update_geode_props(
             origin: OriginFor<T>,
-            geode: T::AccountId,
+            geode_id: T::AccountId,
             prop_name: Vec<u8>,
             prop_value: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let mut geode_use = <Geodes<T>>::get(&geode);
-            ensure!(geode_use.provider == who, Error::<T>::NoRight);
-            geode_use.props.insert(prop_name, prop_value);
-            <Geodes<T>>::insert(&geode, geode_use);
-            Self::deposit_event(Event::PropsUpdate(geode));
+            Self::mut_geode_fn(&geode_id, |geode| {
+                ensure!(geode.provider == who, <Error<T>>::NotOwner);
+                geode.props.insert(prop_name, prop_value);
+                Ok(())
+            })?;
             Ok(().into())
         }
 
-        /// Called by provider to bound dns to geode's ip.
+        /// Update dns of the geode.
         #[pallet::weight(0)]
-        pub fn update_geode_dns(
+        pub fn update_geode_domain(
             origin: OriginFor<T>,
-            geode: T::AccountId,
-            dns: Vec<u8>,
+            geode_id: T::AccountId,
+            domain: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let mut geode_use = <Geodes<T>>::get(&geode);
-            ensure!(geode_use.provider == who, Error::<T>::NoRight);
-            geode_use.dns = dns;
-            <Geodes<T>>::insert(&geode, geode_use);
-            Self::deposit_event(Event::DnsUpdate(geode));
+            Self::mut_geode_fn(&geode_id, |geode| {
+                ensure!(geode.provider == who, <Error<T>>::NotOwner);
+                geode.domain = domain;
+                Ok(())
+            })?;
             Ok(().into())
         }
 
-        /// Called by provider to set promise block number
         #[pallet::weight(0)]
-        pub fn update_geode_promise(
+        pub fn unsigned_geode_ready(
+            _: OriginFor<T>,
+            message: Vec<u8>,
+            signature_raw_bytes: [u8; 64],
+        ) -> DispatchResultWithPostInfo {
+            let (acc, order_id) =
+                Self::decode_message(&message, &signature_raw_bytes, |mut data| {
+                    ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                    Ok(<T::Hash>::decode(&mut data).unwrap_or_default())
+                })?;
+            Self::geode_ready(RawOrigin::Signed(acc).into(), order_id)
+        }
+
+        /// Called when geode finish the data loading, binary loading and etc.
+        /// And is ready to process the order.
+        /// states: Pending -> Working
+        #[pallet::weight(0)]
+        pub fn geode_ready(origin: OriginFor<T>, order_id: T::Hash) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            Self::mut_geode_fn(&who, |geode| {
+                match geode.working_state {
+                    WorkingState::Pending { session_index } => {
+                        ensure!(
+                            geode.order_id == Some(order_id),
+                            Error::<T>::OrderIdNotMatch
+                        );
+                        geode.working_state = WorkingState::Working { session_index };
+                    }
+                    _ => {
+                        return Err(Error::<T>::NotPendingState.into());
+                    }
+                }
+                Ok(())
+            })?;
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn unsigned_geode_finalizing(
+            _: OriginFor<T>,
+            message: Vec<u8>,
+            signature_raw_bytes: [u8; 64],
+        ) -> DispatchResultWithPostInfo {
+            let (acc, order_id) =
+                Self::decode_message(&message, &signature_raw_bytes, |mut data| {
+                    ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                    Ok(<T::Hash>::decode(&mut data).unwrap_or_default())
+                })?;
+            Self::geode_finalizing(RawOrigin::Signed(acc).into(), order_id)
+        }
+
+        /// Called when geode finish its order and working on the finalizing work
+        #[pallet::weight(0)]
+        pub fn geode_finalizing(
             origin: OriginFor<T>,
-            geode: T::AccountId,
-            promise: BlockNumber,
+            order_id: T::Hash,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let mut geode_use = <Geodes<T>>::get(&geode);
-            ensure!(geode_use.provider == who, Error::<T>::NoRight);
-            let block_number =
-                <frame_system::Module<T>>::block_number().saturated_into::<BlockNumber>();
-            ensure!(
-                promise == 0
-                    || promise
-                        > block_number
-                            + T::DispatchConfirmationTimeout::get()
-                            + T::PutOnlineTimeout::get(),
-                Error::<T>::InvalidPromise
-            );
-            // if the geode is instantiated, promise can only be extended
-            if geode_use.state == GeodeState::Instantiated
-                || geode_use.state == GeodeState::Degraded
-            {
+            Self::mut_geode_fn(&who, |geode| {
                 ensure!(
-                    (geode_use.promise != 0 && promise > geode_use.promise) || promise == 0,
-                    Error::<T>::InvalidPromise
+                    geode.order_id == Some(order_id),
+                    Error::<T>::OrderIdNotMatch
                 );
-            }
-
-            // change PromisedGeodes record if there is
-            if geode_use.state == GeodeState::Attested {
-                // remove old record if there is
-                if geode_use.promise
-                    > block_number
-                        + T::DispatchConfirmationTimeout::get()
-                        + T::PutOnlineTimeout::get()
-                    || geode_use.promise == 0
-                {
-                    let mut geodes = <PromisedGeodes<T>>::get(&geode_use.promise);
-                    if let Some(pos) = geodes.iter().position(|x| *x == geode) {
-                        geodes.remove(pos);
-                    }
-
-                    if geodes.is_empty() {
-                        <PromisedGeodes<T>>::remove(&geode_use.promise);
-                    } else {
-                        <PromisedGeodes<T>>::insert(&geode_use.promise, geodes);
-                    }
+                if let WorkingState::Working { session_index } = geode.working_state {
+                    geode.working_state = WorkingState::Finalizing { session_index };
+                } else {
+                    return Err(Error::<T>::NotWorkingState.into());
                 }
+                Ok(())
+            })?;
+            Ok(().into())
+        }
 
-                let mut geodes = Vec::default();
-                if <PromisedGeodes<T>>::contains_key(&promise) {
-                    geodes = <PromisedGeodes<T>>::get(&promise);
+        #[pallet::weight(0)]
+        pub fn unsigned_geode_initialize_failed(
+            _: OriginFor<T>,
+            message: Vec<u8>,
+            signature_raw_bytes: [u8; 64],
+        ) -> DispatchResultWithPostInfo {
+            let (acc, order_id) =
+                Self::decode_message(&message, &signature_raw_bytes, |mut data| {
+                    ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                    Ok(<T::Hash>::decode(&mut data).unwrap_or_default())
+                })?;
+            Self::geode_initialize_failed(RawOrigin::Signed(acc).into(), order_id)
+        }
+
+        /// Called when geode failed to initialize(load data, load binary...).
+        #[pallet::weight(0)]
+        pub fn geode_initialize_failed(
+            origin: OriginFor<T>,
+            order_id: T::Hash,
+            // reason: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let geode = Self::get_geode(&who)?;
+            ensure!(
+                geode.order_id == Some(order_id),
+                Error::<T>::OrderIdNotMatch
+            );
+            <FailRequests<T>>::insert(
+                geode.id.clone(),
+                FailReason {
+                    reason: "initialize_failed".into(),
+                },
+            );
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn unsigned_geode_finalized(
+            _: OriginFor<T>,
+            message: Vec<u8>,
+            signature_raw_bytes: [u8; 64],
+        ) -> DispatchResultWithPostInfo {
+            let (acc, order_id) =
+                Self::decode_message(&message, &signature_raw_bytes, |mut data| {
+                    ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                    Ok(<T::Hash>::decode(&mut data).unwrap_or_default())
+                })?;
+            Self::geode_finalized(RawOrigin::Signed(acc).into(), order_id)
+        }
+
+        /// Called when geode finish the finalization.
+        /// state: finalizing -> idle
+        /// healthy: any?
+        #[pallet::weight(0)]
+        pub fn geode_finalized(
+            origin: OriginFor<T>,
+            order_id: T::Hash,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            Self::mut_geode_fn(&who, |geode| match geode.working_state {
+                WorkingState::Finalizing { .. } => {
+                    ensure!(
+                        geode.order_id == Some(order_id),
+                        Error::<T>::OrderIdNotMatch
+                    );
+                    geode.working_state = WorkingState::Idle;
+                    geode.order_id = None;
+                    Ok(())
                 }
-                geodes.push(geode.clone());
-                <PromisedGeodes<T>>::insert(&promise, geodes);
-            }
+                _ => return Err(Error::<T>::NotFinalizingState.into()),
+            })?;
+            Ok(().into())
+        }
 
-            geode_use.promise = promise;
+        #[pallet::weight(0)]
+        pub fn unsigned_geode_finalize_failed(
+            _: OriginFor<T>,
+            message: Vec<u8>,
+            signature_raw_bytes: [u8; 64],
+        ) -> DispatchResultWithPostInfo {
+            let (acc, order_id) =
+                Self::decode_message(&message, &signature_raw_bytes, |mut data| {
+                    ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                    Ok(<T::Hash>::decode(&mut data).unwrap_or_default())
+                })?;
+            Self::geode_finalize_failed(RawOrigin::Signed(acc).into(), order_id)
+        }
 
-            <Geodes<T>>::insert(&geode, geode_use);
-
-            Self::deposit_event(Event::GeodePromiseUpdate(geode, promise));
-
+        /// Called when geode failed to finalize.
+        /// state: finalizing -> await idle
+        /// healthy: ?
+        #[pallet::weight(0)]
+        pub fn geode_finalize_failed(
+            origin: OriginFor<T>,
+            order_id: T::Hash,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let geode = Self::get_geode(&who)?;
+            ensure!(
+                geode.order_id == Some(order_id),
+                Error::<T>::OrderIdNotMatch
+            );
+            <FailRequests<T>>::insert(
+                geode.id.clone(),
+                FailReason {
+                    reason: "finalize_failed".into(),
+                },
+            );
             Ok(().into())
         }
     }
 
     impl<T: Config> Pallet<T> {
-        /// Return geodes in registered state
-        pub fn registered_geodes() -> Vec<GeodeOf<T>> {
-            let mut res = Vec::new();
-            <RegisteredGeodes<T>>::iter()
-                .map(|(id, _)| {
-                    res.push(<Geodes<T>>::get(id));
-                })
-                .all(|_| true);
-            res
+        fn get_all_geodes() -> Vec<T::AccountId> {
+            <Geodes<T>>::iter()
+                .map(|(account_id, _)| account_id)
+                .collect::<Vec<T::AccountId>>()
         }
 
-        /// Return geodes in attested state
-        pub fn attested_geodes() -> Vec<GeodeOf<T>> {
-            let mut res = Vec::new();
-            <AttestedGeodes<T>>::iter()
-                .map(|(id, _)| {
-                    res.push(<Geodes<T>>::get(id));
-                })
-                .all(|_| true);
-            res
-        }
-
-        /// Return list geode an attestor is attesting
-        pub fn attestor_attested_geodes(attestor: T::AccountId) -> Vec<GeodeOf<T>> {
-            let mut res = Vec::new();
-            if pallet_attestor::Attestors::<T>::contains_key(&attestor) {
-                for geode in pallet_attestor::Attestors::<T>::get(&attestor).geodes {
-                    res.push(Geodes::<T>::get(&geode));
+        fn set_healthy_state(geode_id: T::AccountId, state: HealthyState) -> Option<HealthyState> {
+            match <Geodes<T>>::get(&geode_id) {
+                Some(mut geode) => {
+                    let old = Some(geode.healthy_state);
+                    geode.healthy_state = state;
+                    <Geodes<T>>::insert(geode_id, geode);
+                    old
                 }
-            }
-            res
-        }
-
-        pub fn geode_state(geode: T::AccountId) -> Option<GeodeState> {
-            if <Geodes<T>>::contains_key(&geode) {
-                Some(<Geodes<T>>::get(&geode).state)
-            } else {
-                None
+                None => None,
             }
         }
 
-        pub fn reset_degraded_block_num() {
-            let block_number =
-                <frame_system::Module<T>>::block_number().saturated_into::<BlockNumber>();
-            // reset Registered
-            let mut registered_geodes = Vec::new();
-            <RegisteredGeodes<T>>::iter()
-                .map(|(id, _)| {
-                    registered_geodes.push(id);
-                })
-                .all(|_| true);
-            for id in registered_geodes {
-                <RegisteredGeodes<T>>::insert(id, block_number);
-            }
-            // reset DeprecatedInstantiated
-            let mut degraded_instantiated_geodes = Vec::new();
-            <DegradedGeodes<T>>::iter()
-                .map(|(id, _)| {
-                    degraded_instantiated_geodes.push(id);
-                })
-                .all(|_| true);
-            for id in degraded_instantiated_geodes {
-                <DegradedGeodes<T>>::insert(id, block_number);
+        fn get_geode_and_check_provider(
+            origin: OriginFor<T>,
+            geode_id: &T::AccountId,
+        ) -> Result<GeodeOf<T>, sp_runtime::DispatchError> {
+            let who = ensure_signed(origin)?;
+            let geode = Self::get_geode(&geode_id)?;
+            ensure!(geode.provider.eq(&who), Error::<T>::NotOwner);
+            Ok(geode)
+        }
+
+        fn mut_geode_fn<F>(who: &T::AccountId, f: F) -> DispatchResult
+        where
+            F: FnOnce(&mut GeodeOf<T>) -> DispatchResult,
+        {
+            let mut geode = Self::get_geode(who)?;
+            f(&mut geode)?;
+            <Geodes<T>>::insert(geode.id.clone(), geode);
+            Ok(())
+        }
+
+        fn get_geode(geode_id: &T::AccountId) -> Result<GeodeOf<T>, sp_runtime::DispatchError> {
+            match <Geodes<T>>::get(&geode_id) {
+                Some(geode) => Ok(geode),
+                None => Err(Error::<T>::NonexistentGeode.into()),
             }
         }
 
-        // called by geode provider
-        pub fn dismiss_geode_from_service(geode: T::AccountId, when: BlockNumber) {
-            // reset geode order
-            let mut geode_record = <Geodes<T>>::get(&geode);
-            match geode_record.state {
-                GeodeState::Degraded => {
-                    <DegradedGeodes<T>>::remove(&geode);
-                }
-                GeodeState::Instantiated => {
-                    <InstantiatedGeodes<T>>::remove(&geode);
-                }
-                _ => {}
-            }
-            geode_record.state = GeodeState::Offline;
-            geode_record.order = None;
-            <OfflineGeodes<T>>::insert(geode, when);
-        }
-
-        fn clean_from_promises(geode: &GeodeOf<T>, when: &BlockNumber) {
-            // remove PromisedGeode record if there is
-            if geode.promise
-                > when + T::DispatchConfirmationTimeout::get() + T::PutOnlineTimeout::get()
-                || geode.promise == 0
-            {
-                let mut geodes = <PromisedGeodes<T>>::get(&geode.promise);
-                if let Some(pos) = geodes.iter().position(|x| *x == geode.id) {
-                    geodes.remove(pos);
-                }
-
-                if geodes.is_empty() {
-                    <PromisedGeodes<T>>::remove(&geode.promise);
-                } else {
-                    <PromisedGeodes<T>>::insert(&geode.promise, geodes);
-                }
-            }
-        }
-
-        pub fn add_to_promises(geode: &GeodeOf<T>, when: &BlockNumber) {
-            // move into the PromisedGeodes for queueing for job
-            if geode.promise
-                > when + T::DispatchConfirmationTimeout::get() + T::PutOnlineTimeout::get()
-                || geode.promise == 0
-            {
-                let mut promised_geodes = PromisedGeodes::<T>::get(&geode.promise);
-                promised_geodes.push(geode.id.clone());
-                PromisedGeodes::<T>::insert(geode.promise, &promised_geodes);
-            }
-        }
-
-        pub fn transit_state(geode: &GeodeOf<T>, to: GeodeState) -> bool {
-            let when = <frame_system::Module<T>>::block_number().saturated_into::<BlockNumber>();
-            match geode.state {
-                GeodeState::Registered => {
-                    match to {
-                        GeodeState::Attested => {
-                            Self::add_to_promises(&geode, &when);
-                        }
-                        GeodeState::Unknown => {}
-                        GeodeState::Offline => {}
-                        GeodeState::Null => {}
-                        _ => {
-                            return false;
-                        }
+        // only healthy and idle instance can receive the order
+        fn receive_order(
+            geode_id: T::AccountId,
+            session_index: T::BlockNumber,
+            order_id: T::Hash,
+        ) -> DispatchResult {
+            let mut geode = Self::get_geode(&geode_id)?;
+            match geode.working_state {
+                WorkingState::Idle => match geode.healthy_state {
+                    HealthyState::Healthy => {
+                        geode.working_state = WorkingState::Pending { session_index };
+                        geode.order_id = Some(order_id);
+                        <Geodes<T>>::insert(geode_id, geode);
                     }
-                    <RegisteredGeodes<T>>::remove(&geode.id);
-                }
-                GeodeState::Attested => {
-                    match to {
-                        GeodeState::Instantiated => {}
-                        GeodeState::Registered => {
-                            Self::clean_from_promises(&geode, &when);
-                        }
-                        GeodeState::Unknown => {
-                            Self::clean_from_promises(&geode, &when);
-                            pallet_attestor::Module::<T>::detach_geode_from_attestors(&geode.id);
-                        }
-                        GeodeState::Offline => {
-                            Self::clean_from_promises(&geode, &when);
-                            pallet_attestor::Module::<T>::detach_geode_from_attestors(&geode.id);
-                        }
-                        GeodeState::Null => {
-                            Self::clean_from_promises(&geode, &when);
-                            pallet_attestor::Module::<T>::detach_geode_from_attestors(&geode.id);
-                        }
-                        _ => {
-                            return false;
-                        }
+                    HealthyState::Unhealthy => {
+                        return Err(Error::<T>::GeodeNotHealthy.into());
                     }
-                    <AttestedGeodes<T>>::remove(&geode.id);
-                }
-                GeodeState::Unknown => {
-                    match to {
-                        GeodeState::Null => {}
-                        _ => {
-                            return false;
-                        }
-                    }
-                    <UnknownGeodes<T>>::remove(&geode.id);
-                }
-                GeodeState::Instantiated => {
-                    match to {
-                        GeodeState::Degraded => {}
-                        GeodeState::Attested => {}
-                        GeodeState::Unknown => {
-                            pallet_attestor::Module::<T>::detach_geode_from_attestors(&geode.id);
-                        }
-                        GeodeState::Offline => {
-                            pallet_attestor::Module::<T>::detach_geode_from_attestors(&geode.id);
-                        }
-                        _ => {
-                            return false;
-                        }
-                    }
-                    <InstantiatedGeodes<T>>::remove(&geode.id);
-                }
-                GeodeState::Degraded => {
-                    match to {
-                        GeodeState::Instantiated => {}
-                        GeodeState::Registered => {}
-                        GeodeState::Unknown => {
-                            pallet_attestor::Module::<T>::detach_geode_from_attestors(&geode.id);
-                        }
-                        GeodeState::Offline => {
-                            pallet_attestor::Module::<T>::detach_geode_from_attestors(&geode.id);
-                        }
-                        _ => {
-                            return false;
-                        }
-                    }
-                    <DegradedGeodes<T>>::remove(&geode.id);
-                }
-                GeodeState::Offline => {
-                    match to {
-                        GeodeState::Registered => {}
-                        GeodeState::Null => {}
-                        _ => {
-                            return false;
-                        }
-                    }
-                    <OfflineGeodes<T>>::remove(&geode.id);
-                }
-                GeodeState::Null => {
-                    // shouldn't happen
+                },
+                _ => return Err(Error::<T>::NotPendingState.into()),
+            };
+            Ok(().into())
+        }
+    }
+
+    impl<T: Config> automata_traits::geode::GeodeTrait for Pallet<T> {
+        type AccountId = T::AccountId;
+        type Hash = T::Hash;
+        type BlockNumber = T::BlockNumber;
+
+        // Check the working geode, if it has finished the order, transist its working state to Finalizing.
+        // Exiting -> Exited: In the beginning of session, if geode is in Exting state, will be transisted to Exited state.
+        fn on_new_session(session_index: Self::BlockNumber) {
+            for (geode_id, mut geode) in <Geodes<T>>::iter() {
+                if geode.working_state == WorkingState::Exiting {
+                    geode.working_state = WorkingState::Exited { session_index };
+                    <Geodes<T>>::insert(geode_id, geode);
                 }
             }
-
-            // change geode state and deposit event
-            if to != GeodeState::Null {
-                let mut geode = geode.clone();
-                geode.state = to.clone();
-                <Geodes<T>>::insert(&geode.id, &geode);
-                Self::deposit_event(Event::GeodeStateUpdate(geode.id, to.clone()));
-            } else {
-                <Geodes<T>>::remove(&geode.id);
-                Self::deposit_event(Event::GeodeRemove(geode.id.clone()));
-            }
-
-            // populate new state map
-            match to {
-                GeodeState::Registered => {
-                    <RegisteredGeodes<T>>::insert(&geode.id, &when);
-                }
-                GeodeState::Attested => {
-                    <AttestedGeodes<T>>::insert(&geode.id, &when);
-                }
-                GeodeState::Unknown => {
-                    <UnknownGeodes<T>>::insert(&geode.id, &when);
-                }
-                GeodeState::Instantiated => {
-                    <InstantiatedGeodes<T>>::insert(&geode.id, &when);
-                }
-                GeodeState::Degraded => {
-                    <DegradedGeodes<T>>::insert(&geode.id, &when);
-                }
-                GeodeState::Offline => {
-                    <OfflineGeodes<T>>::insert(&geode.id, &when);
-                }
-                _ => {}
-            }
-
-            true
         }
 
-        /// clean all the storage, USE WITH CARE!
-        pub fn clean_storage() {
-            // clean Geodes
-            {
-                let mut geodes = Vec::new();
-                <Geodes<T>>::iter()
-                    .map(|(key, _)| {
-                        geodes.push(key);
-                    })
-                    .all(|_| true);
-                for geode in geodes.iter() {
-                    <Geodes<T>>::remove(geode);
+        // it's safe to process offline request
+        // for expected states(idle): transited and removed from request list
+        // for working states(pending, working, finalizing): ignored
+        // for current states(exiting, exited): removed from request list
+        fn on_geode_offline(_: Self::BlockNumber) {
+            for (acc_id, geode_id) in <OfflineRequests<T>>::iter() {
+                match <Geodes<T>>::get(&geode_id) {
+                    Some(mut geode) => match geode.working_state {
+                        WorkingState::Idle => {
+                            geode.working_state = WorkingState::Exiting;
+                            <Geodes<T>>::insert(geode_id, geode);
+                            <OfflineRequests<T>>::remove(acc_id);
+                        }
+                        WorkingState::Pending { .. }
+                        | WorkingState::Working { .. }
+                        | WorkingState::Finalizing { .. } => {
+                            // ignored
+                        }
+                        WorkingState::Exiting | WorkingState::Exited { .. } => {
+                            <OfflineRequests<T>>::remove(acc_id);
+                        }
+                    },
+                    None => {
+                        // already offline
+                        <OfflineRequests<T>>::remove(acc_id);
+                    }
                 }
             }
+            for (geode_id, _) in <FailRequests<T>>::iter() {
+                // pending -> initialized failed
+                // finalizing -> finailze failed
+                // set to idle
+                match <Geodes<T>>::get(&geode_id) {
+                    Some(mut geode) => match geode.working_state {
+                        WorkingState::Pending { .. } | WorkingState::Finalizing { .. } => {
+                            geode.working_state = WorkingState::Idle;
+                            <Geodes<T>>::insert(geode_id.clone(), geode);
+                            <FailRequests<T>>::remove(geode_id);
+                        }
+                        WorkingState::Idle
+                        | WorkingState::Working { .. }
+                        | WorkingState::Exiting
+                        | WorkingState::Exited { .. } => {
+                            // idle: we already goto target state
+                            // working: it look like the geode has already retry after sending a failure message
+                            // exiting: sending a failRequest and offline request. ignore
+                            // exited: ignore
+                            <FailRequests<T>>::remove(geode_id);
+                        }
+                    },
+                    None => {
+                        // already offline
+                        <FailRequests<T>>::remove(geode_id);
+                    }
+                }
+            }
+        }
 
-            // clean RegisteredGeodes
-            {
-                let mut registered_geodes = Vec::new();
-                <RegisteredGeodes<T>>::iter()
-                    .map(|(key, _)| {
-                        registered_geodes.push(key);
-                    })
-                    .all(|_| true);
-                for registered_geode in registered_geodes.iter() {
-                    <RegisteredGeodes<T>>::remove(registered_geode);
-                }
+        // 1. Check if the current attestor state is Attestor Abnormal State, if yes, do nothing.
+        // 2. Transist its healthy state to Unhealthy.
+        // 3. Stop the geode from serving, and set the order into an emergency status.
+        // 4. Calculate the slash amount for this geode instance.
+        fn on_geode_unhealthy(geode_id: T::AccountId) {
+            if <T::AttestorHandler>::is_abnormal_mode() {
+                return;
             }
+            Self::set_healthy_state(geode_id, HealthyState::Unhealthy);
+        }
 
-            // clean AttestedGeodes
-            {
-                let mut attested_geodes = Vec::new();
-                <AttestedGeodes<T>>::iter()
-                    .map(|(key, _)| {
-                        attested_geodes.push(key);
-                    })
-                    .all(|_| true);
-                for attested_geode in attested_geodes.iter() {
-                    <AttestedGeodes<T>>::remove(attested_geode);
-                }
-            }
+        // 1. Check if the geode is available for working.
+        // 2. Transist its working state to Pending.
+        fn on_order_dispatched(
+            geode_id: T::AccountId,
+            session_index: T::BlockNumber,
+            order_id: T::Hash,
+        ) -> DispatchResult {
+            Self::receive_order(geode_id, session_index, order_id)?;
+            Ok(())
+        }
 
-            // clean InstantiatedGeodes
-            {
-                let mut instantiated_geodes = Vec::new();
-                <InstantiatedGeodes<T>>::iter()
-                    .map(|(key, _)| {
-                        instantiated_geodes.push(key);
-                    })
-                    .all(|_| true);
-                for instantiated_geode in instantiated_geodes.iter() {
-                    <InstantiatedGeodes<T>>::remove(instantiated_geode);
+        // 1. Check the Pending geode list, if any geode is expired, we treat this geode as unhealthy and start to
+        //    redispatch the order in emergency solution. Maybe we don't slash the geode right now, but we need to
+        //    mark the geode and the order, if the similar case happen for this geode in the future, we need to
+        //    transist its healthy state to Unhealthy and slash it. And if the similar case happen for the order
+        //    in the future, we need to slash the binary provider and prevent the binary from used by other users.
+        // 2. Check the Finalizing geode list? But I don't know how to handle the finalize timeout case,
+        //    maybe don't process it now.
+        fn on_expired_check(session_index: Self::BlockNumber) {
+            for (_, geode) in <Geodes<T>>::iter() {
+                match geode.working_state {
+                    WorkingState::Idle => {}
+                    WorkingState::Pending { .. } => {
+                        match geode.order_id {
+                            Some(order_id) => {
+                                // check whether it spend too much time in pending phase
+                                // get the timeout duration from order
+                                if <T::OrderHandler>::is_order_expired(order_id, session_index) {
+                                    // mark unhealthy
+                                    // redispatch as an emergency order
+                                }
+                            }
+                            None => {
+                                // should not happen
+                            }
+                        };
+                    }
+                    WorkingState::Working { .. } => {}
+                    WorkingState::Finalizing { .. } => {}
+                    WorkingState::Exiting => {}
+                    WorkingState::Exited { .. } => {}
                 }
             }
+        }
+    }
 
-            // clean DegradedGeodes
-            {
-                let mut degraded_instantiated_geodes = Vec::new();
-                <DegradedGeodes<T>>::iter()
-                    .map(|(key, _)| {
-                        degraded_instantiated_geodes.push(key);
-                    })
-                    .all(|_| true);
-                for degraded_instantiated_geode in degraded_instantiated_geodes.iter() {
-                    <DegradedGeodes<T>>::remove(degraded_instantiated_geode);
-                }
-            }
+    impl<T: Config> automata_traits::attestor::ApplicationTrait for Pallet<T> {
+        type AccountId = T::AccountId;
+        /// Currently we will only report a simple `unhealthy` state, but there might be more status in the future.
+        /// E.g maybe something wrong with the application binary
+        fn application_unhealthy(geode_id: Self::AccountId) -> DispatchResult {
+            <Self as automata_traits::geode::GeodeTrait>::on_geode_unhealthy(geode_id);
+            Ok(().into())
+        }
 
-            // clean OfflineGeodes
-            {
-                let mut offline_geodes = Vec::new();
-                <OfflineGeodes<T>>::iter()
-                    .map(|(key, _)| {
-                        offline_geodes.push(key);
-                    })
-                    .all(|_| true);
-                for offline_geode in offline_geodes.iter() {
-                    <OfflineGeodes<T>>::remove(offline_geode);
-                }
-            }
-
-            // clean UnknownGeodes
-            {
-                let mut unknown_geodes = Vec::new();
-                <UnknownGeodes<T>>::iter()
-                    .map(|(key, _)| {
-                        unknown_geodes.push(key);
-                    })
-                    .all(|_| true);
-                for unknown_geode in unknown_geodes.iter() {
-                    <UnknownGeodes<T>>::remove(unknown_geode);
-                }
-            }
+        /// Application are attested by several attestors, and reach healthy state
+        fn application_healthy(geode_id: Self::AccountId) -> DispatchResult {
+            Self::set_healthy_state(geode_id, HealthyState::Healthy);
+            Ok(().into())
         }
     }
 
     impl<T: Config> Get<Vec<T::AccountId>> for Pallet<T> {
         fn get() -> Vec<T::AccountId> {
-            let mut res = Vec::new();
-            <RegisteredGeodes<T>>::iter()
-                .map(|(id, _)| {
-                    res.push(id);
-                })
-                .all(|_| true);
-            res
+            Self::get_all_geodes()
+        }
+    }
+
+    macro_rules! unsigned_rpc {
+        ( $rpc_name:ident, $name:ident ) => {
+            pub fn $rpc_name(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> Result<(), ()> {
+                let call = Call::$name(message, signature_raw_bytes);
+                SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into())
+            }
+        };
+    }
+
+    // unsigned implementation
+    impl<T: Config> Pallet<T> {
+        fn decode_message_in_validate<F>(
+            msg: &Vec<u8>,
+            signature: &[u8; 64],
+            f: F,
+        ) -> Result<T::AccountId, InvalidTransaction>
+        where
+            F: FnOnce(&[u8]) -> sp_runtime::DispatchResult,
+        {
+            let acc = match Self::decode_message(msg, signature, f) {
+                Ok((acc, _)) => acc,
+                Err(_) => return Err(InvalidTransaction::Call),
+            };
+            Ok(acc)
+        }
+
+        fn decode_message<F, N>(
+            message: &Vec<u8>,
+            signature_raw_bytes: &[u8; 64],
+            f: F,
+        ) -> Result<(T::AccountId, N), sp_runtime::DispatchError>
+        where
+            F: FnOnce(&[u8]) -> Result<N, sp_runtime::DispatchError>,
+        {
+            let mut geode_id = [0u8; 32];
+            geode_id.copy_from_slice(&message[0..32]);
+            let pubkey = Public::from_raw(geode_id.clone());
+            let signature = Signature::from_raw(signature_raw_bytes.clone());
+
+            #[cfg(feature = "full_crypto")]
+            ensure!(
+                Sr25519Pair::verify(&signature, message, &pubkey),
+                Error::<T>::InvalidSignature
+            );
+            let acc = T::AccountId::decode(&mut &geode_id[..]).unwrap_or_default();
+            let args = f(&message[32..])?;
+            Ok((acc, args))
+        }
+
+        unsigned_rpc! {rpc_unsigned_geode_ready, unsigned_geode_ready}
+        unsigned_rpc! {rpc_unsigned_geode_finalizing, unsigned_geode_finalizing}
+        unsigned_rpc! {rpc_unsigned_geode_finalize_failed, unsigned_geode_finalize_failed}
+        unsigned_rpc! {rpc_unsigned_geode_finalized, unsigned_geode_finalized}
+    }
+
+    #[pallet::validate_unsigned]
+    impl<T: Config> ValidateUnsigned for Pallet<T> {
+        type Call = Call<T>;
+
+        fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+            let (tag, account) = match call {
+                Call::unsigned_geode_ready(msg, signature) => (
+                    "Automata/geode/unsigned_geode_ready",
+                    Self::decode_message_in_validate(&msg, &signature, |data| {
+                        ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                        Ok(())
+                    })?,
+                ),
+                Call::unsigned_geode_finalizing(msg, signature) => (
+                    "Automata/geode/unsigned_geode_finalizing",
+                    Self::decode_message_in_validate(&msg, &signature, |data| {
+                        ensure!(data.len() == 8, <Error<T>>::InvalidMessage);
+                        Ok(())
+                    })?,
+                ),
+                Call::unsigned_geode_finalized(msg, signature) => (
+                    "Automata/geode/unsigned_geode_finalized",
+                    Self::decode_message_in_validate(&msg, &signature, |data| {
+                        ensure!(data.len() == 8, <Error<T>>::InvalidMessage);
+                        Ok(())
+                    })?,
+                ),
+                Call::unsigned_geode_finalize_failed(msg, signature) => (
+                    "Automata/geode/unsigned_geode_finalize_failed",
+                    Self::decode_message_in_validate(&msg, &signature, |data| {
+                        ensure!(data.len() > 8, <Error<T>>::InvalidMessage);
+                        Ok(())
+                    })?,
+                ),
+                _ => return InvalidTransaction::Call.into(),
+            };
+
+            ValidTransaction::with_tag_prefix(tag)
+                .priority(UNSIGNED_TXS_PRIORITY)
+                .and_provides((account, <frame_system::Pallet<T>>::block_number()))
+                .longevity(3)
+                .propagate(true)
+                .build()
         }
     }
 }

@@ -340,6 +340,46 @@ impl pallet_gmetadata::Config for Runtime {
     type MaxIndexLength = MaxIndexLength;
 }
 
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+    Call: From<C>,
+{
+    type Extrinsic = UncheckedExtrinsic;
+    type OverarchingCall = Call;
+}
+
+parameter_types! {
+    pub const AttestorHeartbeatTimeoutBlockNumber: u32 = 5;
+}
+
+impl pallet_attestor::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type Call = Call;
+    type HeartbeatTimeoutBlockNumber = AttestorHeartbeatTimeoutBlockNumber;
+    type ApplicationHandler = pallet_geode::Pallet<Self>;
+}
+
+impl pallet_geode::Config for Runtime {
+    type Event = Event;
+    type AttestorHandler = pallet_attestor::Pallet<Self>;
+    type OrderHandler = pallet_order::Pallet<Self>;
+}
+
+parameter_types! {
+    pub const SessionBlocks: u32 = 1;
+}
+
+impl pallet_geodesession::Config for Runtime {
+    type Event = Event;
+    type GeodeHandler = pallet_geode::Pallet<Runtime>;
+    type Blocks = SessionBlocks;
+}
+
+impl pallet_order::Config for Runtime {
+    type Event = Event;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -362,6 +402,10 @@ construct_runtime!(
         Game: pallet_game::{Pallet, Call, Storage, Event<T>},
         DAOPortal: pallet_daoportal::{Pallet, Call, Storage, Event<T>},
         Gmetadata: pallet_gmetadata::{Pallet, Call, Storage, Event<T>},
+        Attestor: pallet_attestor::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
+        Geode: pallet_geode::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
+        Order: pallet_order::{Pallet, Call, Storage, Event<T>},
+        GeodeSession: pallet_geodesession::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -392,7 +436,65 @@ pub type Executive = frame_executive::Executive<
     AllPallets,
 >;
 
+sp_api::decl_runtime_apis! {
+    pub trait AttestorApi {
+        fn attestor_list() -> Vec<(Vec<u8>, Vec<u8>, u32)>;
+        fn attestor_attested_appids(attestor: AccountId) -> Vec<AccountId>;
+        fn unsigned_attestor_heartbeat(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool;
+    }
+    pub trait GeodeApi {
+        fn unsigned_geode_ready(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool;
+        fn unsigned_geode_finalizing(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool;
+        fn unsigned_geode_finalized(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool;
+        fn unsigned_geode_finalize_failed(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool;
+    }
+}
+
 impl_runtime_apis! {
+    impl crate::AttestorApi<Block> for Runtime {
+        fn attestor_list() -> Vec<(Vec<u8>, Vec<u8>, u32)> {
+            Attestor::attestor_list()
+        }
+
+        fn attestor_attested_appids(attestor: AccountId) -> Vec<AccountId> {
+            Attestor::attestor_attested_appids(attestor)
+        }
+
+        fn unsigned_attestor_heartbeat(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool {
+            match Attestor::unsigned_attestor_heartbeat(message, signature_raw_bytes) {
+                Ok(_) => true,
+                Err(_) => false,
+            }
+        }
+    }
+
+    impl crate::GeodeApi<Block> for Runtime {
+        fn unsigned_geode_ready(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool {
+            match Geode::rpc_unsigned_geode_ready(message, signature_raw_bytes) {
+                Ok(_) => true,
+                Err(_) => false,
+            }
+        }
+        fn unsigned_geode_finalizing(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool {
+            match Geode::rpc_unsigned_geode_finalizing(message, signature_raw_bytes) {
+                Ok(_) => true,
+                Err(_) => false,
+            }
+        }
+        fn unsigned_geode_finalized(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool {
+            match Geode::rpc_unsigned_geode_finalized(message, signature_raw_bytes) {
+                Ok(_) => true,
+                Err(_) => false,
+            }
+        }
+        fn unsigned_geode_finalize_failed(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool {
+            match Geode::rpc_unsigned_geode_finalize_failed(message, signature_raw_bytes) {
+                Ok(_) => true,
+                Err(_) => false,
+            }
+        }
+    }
+
     impl sp_api::Core<Block> for Runtime {
         fn version() -> RuntimeVersion {
             VERSION

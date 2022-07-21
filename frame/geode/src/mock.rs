@@ -8,6 +8,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
+use frame_support::dispatch::DispatchResult;
 use frame_support::dispatch::DispatchResultWithPostInfo;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -106,11 +107,48 @@ where
     type OverarchingCall = Call;
 }
 
+parameter_types! {
+    pub const MinimumAttestorNum: u16 = 1;
+    pub const ExpectedAttestorNum: u16 = 2;
+    pub const HeartbeatTimeoutBlockNumber: u32 = 32;
+}
+
 impl pallet_attestor::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
-    type AttestorAccounting = Test;
+    type HeartbeatTimeoutBlockNumber = HeartbeatTimeoutBlockNumber;
+    type ApplicationHandler = Test;
+}
+
+impl automata_traits::attestor::ApplicationTrait for Test {
+    type AccountId = u64;
+
+    fn application_unhealthy(who: Self::AccountId) -> DispatchResult {
+        Ok(().into())
+    }
+
+    fn application_healthy(who: Self::AccountId) -> DispatchResult {
+        Ok(().into())
+    }
+}
+
+impl automata_traits::attestor::AttestorTrait for Test {
+    type AccountId = u64;
+    fn is_abnormal_mode() -> bool {
+        false
+    }
+    fn check_healthy(app_id: &Self::AccountId) -> bool {
+        false
+    }
+}
+
+impl automata_traits::order::OrderTrait for Test {
+    type BlockNumber = u64;
+    type Hash = H256;
+    fn is_order_expired(_order_id: Self::Hash, _session_index: Self::BlockNumber) -> bool {
+        false
+    }
 }
 
 parameter_types! {
@@ -121,10 +159,8 @@ parameter_types! {
 
 impl pallet_geode::Config for Test {
     type Event = Event;
-    type GeodeAccounting = Test;
-    type DispatchConfirmationTimeout = DispatchConfirmationTimeout;
-    type PutOnlineTimeout = PutOnlineTimeout;
-    type AttestationExpiryBlockNumber = AttestationExpiryBlockNumber;
+    type AttestorHandler = Test;
+    type OrderHandler = Test;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -154,37 +190,45 @@ pub fn events() -> Vec<Event> {
     evt
 }
 
-pub fn register_attestor(attestor_account: <Test as system::Config>::AccountId) {
+pub fn register_attestor(
+    attestor_account: <Test as system::Config>::AccountId,
+) -> DispatchResultWithPostInfo {
     let url = vec![1];
     let pubkey = vec![2];
     let min_stake = 100;
     let attestor_account = 1;
 
     // successfully call register
+    AttestorModule::set_whitelist(Origin::root(), attestor_account, true)?;
+
+    // successfully call register
     AttestorModule::attestor_register(
         Origin::signed(attestor_account),
         url.clone(),
         pubkey.clone(),
-    );
+    )
 }
 
 pub fn provider_register_geode(
     provider: <Test as system::Config>::AccountId,
     geode_id: <Test as system::Config>::AccountId,
-) {
-    let geode: pallet_geode::Geode<
-        <Test as system::Config>::AccountId,
-        <Test as system::Config>::Hash,
-    > = pallet_geode::Geode {
+) -> DispatchResultWithPostInfo {
+    let geode: pallet_geode::GeodeOf<Test> = pallet_geode::Geode {
         id: geode_id,
-        provider: provider,
-        order: None,
+        provider,
+        order_id: None,
         ip: vec![],
-        dns: vec![],
+        domain: vec![],
         props: Default::default(),
-        state: Default::default(),
-        promise: Default::default(),
+        working_state: Default::default(),
+        healthy_state: Default::default(),
     };
 
-    GeodeModule::provider_register_geode(Origin::signed(provider), geode);
+    GeodeModule::register_geode(Origin::signed(provider), geode)
+}
+
+pub fn gen_hash(val: u8) -> H256 {
+    let mut hash = H256::default();
+    hash.0[0] = val;
+    hash
 }

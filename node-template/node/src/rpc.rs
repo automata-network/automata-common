@@ -7,12 +7,19 @@
 
 use std::sync::Arc;
 
+use jsonrpc_core::{Error, ErrorCode, Result};
+use jsonrpc_derive::rpc;
+use jsonrpc_pubsub::manager::{RandomStringIdProvider, SubscriptionManager};
 use node_template_runtime::{opaque::Block, AccountId, Balance, Index};
+use sc_client_api::client::BlockchainEvents;
+use sc_rpc::SubscriptionTaskExecutor;
 pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use sp_runtime::{traits::Block as BlockT, RuntimeDebug};
+use sp_std::prelude::*;
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -25,7 +32,10 @@ pub struct FullDeps<C, P> {
 }
 
 /// Instantiate all full RPC extensions.
-pub fn create_full<C, P>(deps: FullDeps<C, P>) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
+pub fn create_full<C, P>(
+    deps: FullDeps<C, P>,
+    _subscription_task_executor: SubscriptionTaskExecutor,
+) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
 where
     C: ProvideRuntimeApi<Block>,
     C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
@@ -33,6 +43,9 @@ where
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: BlockBuilder<Block>,
+    C::Api: node_template_runtime::AttestorApi<Block>,
+    C::Api: node_template_runtime::GeodeApi<Block>,
+    C: BlockchainEvents<Block>,
     P: TransactionPool + 'static,
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
@@ -55,10 +68,13 @@ where
         client.clone(),
     )));
 
-    // Extend this RPC with a custom API by using the following syntax.
-    // `YourRpcStruct` should have a reference to a client, which is needed
-    // to call into the runtime.
-    // `io.extend_with(YourRpcTrait::to_delegate(YourRpcStruct::new(ReferenceToClient, ...)));`
+    use super::rpc_attestor::{AttestorApi, AttestorServer};
+    io.extend_with(AttestorServer::to_delegate(AttestorApi::new(
+        client.clone(),
+    )));
+
+    use super::rpc_geode::{GeodeApi, GeodeServer};
+    io.extend_with(GeodeServer::to_delegate(GeodeApi::new(client.clone())));
 
     io
 }
