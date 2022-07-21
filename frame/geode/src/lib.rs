@@ -165,7 +165,6 @@ pub mod pallet {
         /// Called when geode want to register itself on chain.
         /// working: not_exist | exited
         /// healthy: unlimited
-        /// Callee: geode_provider
         #[pallet::weight(0)]
         pub fn register_geode(
             origin: OriginFor<T>,
@@ -206,7 +205,6 @@ pub mod pallet {
         /// Called when geode want to remove itself.
         /// Once the function is called and its working state is `Idle`, the state will be changed to `Exiting` during the offline phase of next session.
         /// If the current working state is not `Idle`, need to wait until it changes to `Idle`.
-        /// Callee: geode_provider
         #[pallet::weight(0)]
         pub fn remove_geode(
             origin: OriginFor<T>,
@@ -219,7 +217,6 @@ pub mod pallet {
         }
 
         /// Update a property of the geode.
-        /// Callee: geode
         #[pallet::weight(0)]
         pub fn update_geode_props(
             origin: OriginFor<T>,
