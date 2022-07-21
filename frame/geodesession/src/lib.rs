@@ -39,7 +39,6 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(block_height: BlockNumberFor<T>) -> Weight {
             let mut session_index = <SessionId<T>>::get();
-            log::info!("block n: {:?}", block_height % T::Blocks::get());
             if block_height % T::Blocks::get() == 0u32.into() {
                 session_index += 1u32.into();
                 <SessionId<T>>::put(session_index);
