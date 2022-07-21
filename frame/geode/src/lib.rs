@@ -123,7 +123,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: SendTransactionTypes<Call<Self>> + frame_system::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        type AttestorHandler: AttestorTrait;
+        type AttestorHandler: AttestorTrait<AccountId = Self::AccountId>;
         type OrderHandler: OrderTrait<BlockNumber = Self::BlockNumber, Hash = Self::Hash>;
     }
 
@@ -188,7 +188,11 @@ pub mod pallet {
                     // Register a new geode instance
                     let mut geode_record = geode.clone();
                     geode_record.working_state = WorkingState::Idle;
-                    geode_record.healthy_state = HealthyState::Unhealthy;
+                    geode_record.healthy_state = if <T::AttestorHandler>::check_healthy(&geode_record.id) {
+                        HealthyState::Healthy
+                    } else {
+                        HealthyState::Unhealthy
+                    };
                     geode_record.provider = who;
                     geode_record.order_id = None;
                     <Geodes<T>>::insert(geode_record.id.clone(), geode_record);

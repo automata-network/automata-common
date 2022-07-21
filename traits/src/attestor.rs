@@ -11,5 +11,7 @@ pub trait ApplicationTrait {
 }
 
 pub trait AttestorTrait {
+    type AccountId;
     fn is_abnormal_mode() -> bool;
+    fn check_healthy(app_id: &Self::AccountId) -> bool;
 }

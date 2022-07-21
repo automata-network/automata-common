@@ -564,8 +564,13 @@ pub mod pallet {
     }
 
     impl<T: Config> AttestorTrait for Pallet<T> {
+        type AccountId = T::AccountId;
         fn is_abnormal_mode() -> bool {
             false
+        }
+        fn check_healthy(app_id: &Self::AccountId) -> bool {
+            let attestor_list = <AttestorsOfApplications<T>>::get(app_id);
+            attestor_list.len() >= <MinimumAttestorNum<T>>::get() as usize
         }
     }
 

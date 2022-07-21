@@ -367,7 +367,7 @@ impl pallet_geode::Config for Runtime {
 }
 
 parameter_types! {
-    pub const SessionBlocks: u32 = 100;
+    pub const SessionBlocks: u32 = 1;
 }
 
 impl pallet_geodesession::Config for Runtime {
