@@ -188,11 +188,12 @@ pub mod pallet {
                     // Register a new geode instance
                     let mut geode_record = geode.clone();
                     geode_record.working_state = WorkingState::Idle;
-                    geode_record.healthy_state = if <T::AttestorHandler>::check_healthy(&geode_record.id) {
-                        HealthyState::Healthy
-                    } else {
-                        HealthyState::Unhealthy
-                    };
+                    geode_record.healthy_state =
+                        if <T::AttestorHandler>::check_healthy(&geode_record.id) {
+                            HealthyState::Healthy
+                        } else {
+                            HealthyState::Unhealthy
+                        };
                     geode_record.provider = who;
                     geode_record.order_id = None;
                     <Geodes<T>>::insert(geode_record.id.clone(), geode_record);
