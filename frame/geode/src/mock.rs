@@ -134,7 +134,11 @@ impl automata_traits::attestor::ApplicationTrait for Test {
 }
 
 impl automata_traits::attestor::AttestorTrait for Test {
+    type AccountId = u64;
     fn is_abnormal_mode() -> bool {
+        false
+    }
+    fn check_healthy(app_id: &Self::AccountId) -> bool {
         false
     }
 }
