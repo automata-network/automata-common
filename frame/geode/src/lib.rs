@@ -63,8 +63,6 @@ pub mod pallet {
         Finalizing { session_index: BlockNumber },
         /// The geode is trying to exit, we should not dispatch orders to it
         Exiting,
-        /// The geode has exited successfully, and it can shutdown at any time
-        Exited { session_index: BlockNumber },
     }
 
     impl<BlockNumber> Default for WorkingState<BlockNumber> {
@@ -171,33 +169,22 @@ pub mod pallet {
             geode: GeodeOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            match <Geodes<T>>::get(&geode.id) {
-                Some(mut existing_geode) => {
-                    // If there is already a geode record, should check its working state
-                    // Only `Exited` state geode is allowed to register again
-                    ensure!(existing_geode.provider == who, Error::<T>::DuplicateGeodeId);
-                    if let WorkingState::Exited { .. } = existing_geode.working_state {
-                        existing_geode.working_state = WorkingState::Idle;
-                        <Geodes<T>>::insert(geode.id.clone(), existing_geode);
-                    } else {
-                        return Err(Error::<T>::StateNotExited.into());
-                    }
-                }
-                None => {
-                    // Register a new geode instance
-                    let mut geode_record = geode.clone();
-                    geode_record.working_state = WorkingState::Idle;
-                    geode_record.healthy_state =
-                        if <T::AttestorHandler>::check_healthy(&geode_record.id) {
-                            HealthyState::Healthy
-                        } else {
-                            HealthyState::Unhealthy
-                        };
-                    geode_record.provider = who;
-                    geode_record.order_id = None;
-                    <Geodes<T>>::insert(geode_record.id.clone(), geode_record);
-                }
-            }
+            ensure!(
+                !<Geodes<T>>::contains_key(&geode.id),
+                Error::<T>::DuplicateGeodeId
+            );
+
+            // Register a new geode instance
+            let mut geode_record = geode.clone();
+            geode_record.working_state = WorkingState::Idle;
+            geode_record.healthy_state = if <T::AttestorHandler>::check_healthy(&geode_record.id) {
+                HealthyState::Healthy
+            } else {
+                HealthyState::Unhealthy
+            };
+            geode_record.provider = who;
+            geode_record.order_id = None;
+            <Geodes<T>>::insert(geode_record.id.clone(), geode_record);
             Self::deposit_event(Event::RegisterGeode(geode.id));
             Ok(().into())
         }
@@ -515,8 +502,7 @@ pub mod pallet {
         fn on_new_session(session_index: Self::BlockNumber) {
             for (geode_id, mut geode) in <Geodes<T>>::iter() {
                 if geode.working_state == WorkingState::Exiting {
-                    geode.working_state = WorkingState::Exited { session_index };
-                    <Geodes<T>>::insert(geode_id, geode);
+                    <Geodes<T>>::remove(geode_id);
                 }
             }
         }
@@ -539,7 +525,7 @@ pub mod pallet {
                         | WorkingState::Finalizing { .. } => {
                             // ignored
                         }
-                        WorkingState::Exiting | WorkingState::Exited { .. } => {
+                        WorkingState::Exiting => {
                             <OfflineRequests<T>>::remove(acc_id);
                         }
                     },
@@ -562,8 +548,7 @@ pub mod pallet {
                         }
                         WorkingState::Idle
                         | WorkingState::Working { .. }
-                        | WorkingState::Exiting
-                        | WorkingState::Exited { .. } => {
+                        | WorkingState::Exiting => {
                             // idle: we already goto target state
                             // working: it look like the geode has already retry after sending a failure message
                             // exiting: sending a failRequest and offline request. ignore
@@ -630,7 +615,6 @@ pub mod pallet {
                     WorkingState::Working { .. } => {}
                     WorkingState::Finalizing { .. } => {}
                     WorkingState::Exiting => {}
-                    WorkingState::Exited { .. } => {}
                 }
             }
         }
