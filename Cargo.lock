@@ -4104,6 +4104,7 @@ dependencies = [
  "jsonrpc-pubsub 15.1.0",
  "log",
  "node-template-runtime",
+ "pallet-daoportal",
  "pallet-geode",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",

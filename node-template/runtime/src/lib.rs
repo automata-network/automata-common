@@ -46,6 +46,8 @@ pub use sp_runtime::{Perbill, Permill};
 /// Import the template pallet.
 pub use pallet_template;
 
+use pallet_daoportal::datastructures::{DAOProposal, Project, ProjectId, ProposalId};
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -448,6 +450,11 @@ sp_api::decl_runtime_apis! {
         fn unsigned_geode_finalized(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool;
         fn unsigned_geode_finalize_failed(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool;
     }
+    pub trait DAOPortalApi {
+        fn get_projects() -> Vec<(ProjectId, Project<AccountId>)>;
+        fn get_proposals(project_id: ProjectId) -> Vec<(ProposalId, DAOProposal<AccountId>)>;
+        fn get_all_proposals() -> Vec<(ProjectId, ProposalId, DAOProposal<AccountId>)>;
+    }
 }
 
 impl_runtime_apis! {
@@ -492,6 +499,20 @@ impl_runtime_apis! {
                 Ok(_) => true,
                 Err(_) => false,
             }
+        }
+    }
+
+    impl crate::DAOPortalApi<Block> for Runtime {
+        fn get_projects() -> Vec<(ProjectId, Project<AccountId>)> {
+            DAOPortal::get_projects()
+        }
+
+        fn get_proposals(project_id: ProjectId) -> Vec<(ProjectId, DAOProposal<AccountId>)> {
+            DAOPortal::get_proposals(project_id)
+        }
+
+        fn get_all_proposals() -> Vec<(ProjectId, ProposalId, DAOProposal<AccountId>)> {
+            DAOPortal::get_all_proposals()
         }
     }
 

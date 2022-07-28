@@ -8,6 +8,7 @@ mod cli;
 mod command;
 mod rpc;
 mod rpc_attestor;
+mod rpc_daoportal;
 mod rpc_geode;
 
 fn main() -> sc_cli::Result<()> {

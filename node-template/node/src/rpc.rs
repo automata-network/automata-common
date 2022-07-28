@@ -45,6 +45,7 @@ where
     C::Api: BlockBuilder<Block>,
     C::Api: node_template_runtime::AttestorApi<Block>,
     C::Api: node_template_runtime::GeodeApi<Block>,
+    C::Api: node_template_runtime::DAOPortalApi<Block>,
     C: BlockchainEvents<Block>,
     P: TransactionPool + 'static,
 {
@@ -75,6 +76,9 @@ where
 
     use super::rpc_geode::{GeodeApi, GeodeServer};
     io.extend_with(GeodeServer::to_delegate(GeodeApi::new(client.clone())));
+
+    use super::rpc_daoportal::{DAOPortalApi, DAOPortalServer};
+    io.extend_with(DAOPortalServer::to_delegate(DAOPortalApi::new(client.clone())));
 
     io
 }

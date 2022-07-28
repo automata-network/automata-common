@@ -69,6 +69,7 @@ frame-benchmarking-cli = { git = 'https://github.com/automata-network/substrate.
 node-template-runtime = { version = "3.0.0", path = "../runtime" }
 automata-primitives = { path = "../../primitives" }
 pallet-geode = { path = "../../frame/geode" }
+pallet-daoportal = { path = "../../frame/daoportal" }
 log = { version = "0.4.17" }
 
 [build-dependencies]
