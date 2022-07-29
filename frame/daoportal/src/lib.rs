@@ -156,6 +156,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        // Why is it possible to remove only the last chain? why not by ID?
         #[pallet::weight(0)]
         pub fn remove_last_chain(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
@@ -219,6 +220,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
+            // It seems unnecesary. Why not to look up the project id in Projects StorageMap
             ensure!(
                 project_id <= Self::latest_project_id(),
                 Error::<T>::InvalidProject
@@ -241,6 +243,7 @@ pub mod pallet {
 
                     Ok(())
                 } else {
+                    // It seems it is a wrong error message? Is it a proposal?
                     Err(Error::<T>::InvalidProposal.into())
                 }
             })?;
@@ -256,6 +259,8 @@ pub mod pallet {
             project_id: ProjectId,
             mut proposal: DAOProposal<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
+            // All this checkins so go after ensure_signed
+            // You can gather all this checkings under a function Self::checkProposal()
             ensure!(proposal._option_count > 1, Error::<T>::InvalidProposal);
             ensure!(
                 proposal._option_count <= T::MaxOptionCount::get(),
@@ -282,7 +287,7 @@ pub mod pallet {
             }
 
             // TODO: Reject Opaque proposal with frequency (or ignore it)
-
+            // This checking should be always the first one to check
             let who = ensure_signed(origin)?;
 
             let relayer = Self::relayer();
@@ -299,6 +304,7 @@ pub mod pallet {
                         .saturating_add(update_count);
                 }
                 let fee = Self::vote_fee().saturating_mul(update_count.into());
+                // Unnecesary. Currency::transfer() already check that. You can map_err its result
                 ensure!(
                     T::Currency::free_balance(&who) >= fee,
                     Error::<T>::InsufficientBalance
@@ -339,11 +345,15 @@ pub mod pallet {
         pub fn update_vote(origin: OriginFor<T>, update: VoteUpdate) -> DispatchResultWithPostInfo {
             // TODO: ensure the timing for geode update is valid
             let who = ensure_signed(origin)?;
+            // This and following checkings can be gathered in a new method Self::checkProposal()
             ensure!(who == Self::relayer(), Error::<T>::NotRelayer);
+            // You should do a look up in your Proposals DoubleStorageMap based on the projectId and proposalId
+            // Reading the lastest indexes is unncessary
             ensure!(
                 update.project <= Self::latest_project_id(),
                 Error::<T>::InvalidProject
             );
+            // Reading the lastest indexes is unncessary
             ensure!(
                 update.proposal <= Self::latest_proposal_id(update.project),
                 Error::<T>::InvalidProposal
@@ -353,6 +363,7 @@ pub mod pallet {
                 update.proposal,
                 |proposal| -> DispatchResult {
                     if let Some(ref mut proposal) = proposal {
+                        // Move to checkProposal
                         ensure!(
                             update.votes.len() == proposal.state.votes.len(),
                             Error::<T>::InvalidVote
@@ -405,10 +416,12 @@ pub mod pallet {
             // TODO: ensure the timing for geode update is valid
             let who = ensure_signed(origin)?;
             ensure!(who == Self::relayer(), Error::<T>::NotRelayer);
+            // Same, you should to look up by id in StorageMap
             ensure!(
                 project_id <= Self::latest_project_id(),
                 Error::<T>::InvalidProject
             );
+            // Same, you should to look up by id in StorageMap
             ensure!(
                 proposal_id <= Self::latest_proposal_id(project_id),
                 Error::<T>::InvalidProposal
@@ -441,6 +454,7 @@ pub mod pallet {
 
         // TODO: admin calls
         #[pallet::weight(0)]
+        // This seems dangerous and without granularity
         pub fn clean_data(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
 
@@ -474,9 +488,10 @@ pub mod pallet {
             let mut workspaces = BTreeSet::<ChainIndex>::new();
 
             for workspace in &project.workspaces {
-                if chain_index == 0 {
+                if chain_index == 0 { // It will be always 0, won't it?? What is the point
                     chain_index = Self::latest_chain_index();
                 }
+                // Why not to check if is valid with Chains::<T>::contains_key(_chain) ?
                 ensure!(workspace._chain <= chain_index, Error::<T>::InvalidChain);
                 ensure!(
                     !workspaces.contains(&workspace._chain),
