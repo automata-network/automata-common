@@ -49,6 +49,10 @@ sc-basic-authorship = { git = 'https://github.com/automata-network/substrate.git
 substrate-frame-rpc-system = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 pallet-transaction-payment-rpc = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 
+# local dependencies
+pallet-daoportal-rpc = { path = "../../frame/daoportal/rpc" }
+pallet-gmetadata-rpc = { path = "../../frame/gmetadata/rpc" }
+
 # These dependencies are used for runtime benchmarking
 frame-benchmarking = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 frame-benchmarking-cli = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
