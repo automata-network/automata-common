@@ -497,7 +497,7 @@ impl_runtime_apis! {
             }
         }
     }
-    
+
     impl pallet_daoportal_rpc_runtime_api::DAOPortalRuntimeApi<Block, AccountId> for Runtime {
         fn get_projects() -> Vec<(ProjectId, Project<AccountId>)> {
             DAOPortal::get_projects()
