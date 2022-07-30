@@ -45,9 +45,12 @@ where
     C::Api: BlockBuilder<Block>,
     C::Api: node_template_runtime::AttestorApi<Block>,
     C::Api: node_template_runtime::GeodeApi<Block>,
-    C: BlockchainEvents<Block>,
+    C::Api: pallet_daoportal_rpc::DAOPortalRuntimeApi<Block, AccountId>,
+    C::Api: pallet_gmetadata_rpc::GmetadataRuntimeApi<Block>,
     P: TransactionPool + 'static,
 {
+    use pallet_daoportal_rpc::{DAOPortalApi, DAOPortalClient};
+    use pallet_gmetadata_rpc::{GmetadataApi, GmetadataClient};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
 
@@ -68,13 +71,13 @@ where
         client.clone(),
     )));
 
-    use super::rpc_attestor::{AttestorApi, AttestorServer};
-    io.extend_with(AttestorServer::to_delegate(AttestorApi::new(
+    io.extend_with(DAOPortalApi::to_delegate(DAOPortalClient::new(
         client.clone(),
     )));
 
-    use super::rpc_geode::{GeodeApi, GeodeServer};
-    io.extend_with(GeodeServer::to_delegate(GeodeApi::new(client.clone())));
+    io.extend_with(GmetadataApi::to_delegate(GmetadataClient::new(
+        client.clone(),
+    )));
 
     io
 }

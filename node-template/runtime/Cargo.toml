@@ -1,111 +1,114 @@
 [package]
-name = "node-template-runtime"
-version = "3.0.0"
 authors = ["Substrate DevHub <https://github.com/substrate-developer-hub>"]
 edition = "2018"
-license = "Unlicense"
 homepage = "https://substrate.dev"
-repository = "https://github.com/substrate-developer-hub/substrate-node-template/"
+license = "Unlicense"
+name = "node-template-runtime"
 publish = false
+repository = "https://github.com/substrate-developer-hub/substrate-node-template/"
+version = "3.0.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+codec = {package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"]}
 
-pallet-aura = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-balances = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-frame-support = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-grandpa = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-randomness-collective-flip = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-sudo = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-frame-system = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-timestamp = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-transaction-payment = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-frame-executive = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-api = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-block-builder = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false, version = "4.0.0-dev"}
-sp-consensus-aura = { version = "0.10.0-dev", default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-core = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-inherents = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false}
-sp-offchain = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-runtime = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-session = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-std = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-transaction-pool = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-sp-version = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+frame-executive = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+frame-support = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+frame-system = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+pallet-aura = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+pallet-balances = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+pallet-grandpa = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+pallet-randomness-collective-flip = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+pallet-sudo = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+pallet-timestamp = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+pallet-transaction-payment = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+sp-api = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+sp-block-builder = {git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false, version = "4.0.0-dev"}
+sp-consensus-aura = {version = "0.10.0-dev", default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+sp-core = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+sp-inherents = {git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false}
+sp-offchain = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+sp-runtime = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+sp-session = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+sp-std = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+sp-transaction-pool = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+sp-version = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
 
 # Used for the node template's RPCs
-frame-system-rpc-runtime-api = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-transaction-payment-rpc-runtime-api = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+frame-system-rpc-runtime-api = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
+pallet-transaction-payment-rpc-runtime-api = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
 
 # Used for runtime benchmarking
-frame-benchmarking = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', optional = true }
-frame-system-benchmarking = {  default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', optional = true }
-hex-literal = { version = "0.3.1", optional = true }
+frame-benchmarking = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', optional = true}
+frame-system-benchmarking = {default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', optional = true}
+hex-literal = {version = "0.3.1", optional = true}
 
-pallet-template = { version = "3.0.0", default-features = false, path = "../pallets/template" }
-pallet-vesting = { version = "0.1.0", default-features = false, path = "../../frame/vesting" }
-pallet-economics = { version = "0.1.0", default-features = false, path = "../../frame/economics" }
-pallet-game = { version = "0.1.0", default-features = false, path = "../../frame/game" }
-pallet-daoportal = { version = "0.1.0", default-features = false, path = "../../frame/daoportal" }
-pallet-gmetadata = { version = "0.1.0", default-features = false, path = "../../frame/gmetadata" }
-pallet-geodesession = { version = "0.1.0", default-features = false, path = "../../frame/geodesession" }
-pallet-geode = { version = "0.1.0", default-features = false, path = "../../frame/geode" }
-pallet-attestor = { version = "0.1.0", default-features = false, path = "../../frame/attestor" }
-pallet-accounting = { version = "0.1.0", default-features = false, path = "../../frame/accounting" }
-pallet-order = { version = "0.1.0", default-features = false, path = "../../frame/order" }
+pallet-attestor = {version = "0.1.0", default-features = false, path = "../../frame/attestor"}
+pallet-daoportal = {version = "0.1.0", default-features = false, path = "../../frame/daoportal"}
+pallet-daoportal-rpc-runtime-api = {version = "0.1.0", default-features = false, path = "../../frame/daoportal/rpc/runtime-api"}
+pallet-economics = {version = "0.1.0", default-features = false, path = "../../frame/economics"}
+pallet-game = {version = "0.1.0", default-features = false, path = "../../frame/game"}
+pallet-geode = {version = "0.1.0", default-features = false, path = "../../frame/geode"}
+pallet-geodesession = {version = "0.1.0", default-features = false, path = "../../frame/geodesession"}
+pallet-gmetadata = {version = "0.1.0", default-features = false, path = "../../frame/gmetadata"}
+pallet-gmetadata-rpc-runtime-api = {version = "0.1.0", default-features = false, path = "../../frame/gmetadata/rpc/runtime-api"}
+pallet-order = {version = "0.1.0", default-features = false, path = "../../frame/order"}
+pallet-template = {version = "3.0.0", default-features = false, path = "../pallets/template"}
+pallet-vesting = {version = "0.1.0", default-features = false, path = "../../frame/vesting"}
 
 [build-dependencies]
-substrate-wasm-builder = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+substrate-wasm-builder = {git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
 
 [features]
 default = ["std"]
-std = [
-	"codec/std",
-	"frame-executive/std",
-	"frame-support/std",
-	"frame-system-rpc-runtime-api/std",
-	"frame-system/std",
-	"pallet-aura/std",
-	"pallet-balances/std",
-	"pallet-grandpa/std",
-	"pallet-randomness-collective-flip/std",
-	"pallet-sudo/std",
-	"pallet-template/std",
-	"pallet-timestamp/std",
-	"pallet-transaction-payment-rpc-runtime-api/std",
-	"pallet-transaction-payment/std",
-	"pallet-vesting/std",
-	"pallet-economics/std",
-	"pallet-game/std",
-	"pallet-daoportal/std",
-	"pallet-gmetadata/std",
-	"sp-api/std",
-	"sp-block-builder/std",
-	"sp-consensus-aura/std",
-	"sp-core/std",
-	"sp-inherents/std",
-	"sp-offchain/std",
-	"sp-runtime/std",
-	"sp-session/std",
-	"sp-std/std",
-	"sp-transaction-pool/std",
-	"sp-version/std",
-]
 runtime-benchmarks = [
-	"frame-benchmarking",
-	"frame-support/runtime-benchmarks",
-	"frame-system-benchmarking",
-	"frame-system/runtime-benchmarks",
-	"hex-literal",
-	"pallet-balances/runtime-benchmarks",
-	"pallet-template/runtime-benchmarks",
-	"pallet-timestamp/runtime-benchmarks",
-	"pallet-vesting/runtime-benchmarks",
-	"pallet-economics/runtime-benchmarks",
-	"pallet-game/runtime-benchmarks",
-	"pallet-daoportal/runtime-benchmarks",
-	"sp-runtime/runtime-benchmarks",
+  "frame-benchmarking",
+  "frame-support/runtime-benchmarks",
+  "frame-system-benchmarking",
+  "frame-system/runtime-benchmarks",
+  "hex-literal",
+  "pallet-balances/runtime-benchmarks",
+  "pallet-template/runtime-benchmarks",
+  "pallet-timestamp/runtime-benchmarks",
+  "pallet-vesting/runtime-benchmarks",
+  "pallet-economics/runtime-benchmarks",
+  "pallet-game/runtime-benchmarks",
+  "pallet-daoportal/runtime-benchmarks",
+  "sp-runtime/runtime-benchmarks",
+]
+std = [
+  "codec/std",
+  "frame-executive/std",
+  "frame-support/std",
+  "frame-system-rpc-runtime-api/std",
+  "frame-system/std",
+  "pallet-aura/std",
+  "pallet-balances/std",
+  "pallet-grandpa/std",
+  "pallet-randomness-collective-flip/std",
+  "pallet-sudo/std",
+  "pallet-template/std",
+  "pallet-timestamp/std",
+  "pallet-transaction-payment-rpc-runtime-api/std",
+  "pallet-transaction-payment/std",
+  "pallet-vesting/std",
+  "pallet-economics/std",
+  "pallet-game/std",
+  "pallet-daoportal/std",
+  "pallet-daoportal-rpc-runtime-api/std",
+  "pallet-gmetadata/std",
+  "pallet-gmetadata-rpc-runtime-api/std",
+  "sp-api/std",
+  "sp-block-builder/std",
+  "sp-consensus-aura/std",
+  "sp-core/std",
+  "sp-inherents/std",
+  "sp-offchain/std",
+  "sp-runtime/std",
+  "sp-session/std",
+  "sp-std/std",
+  "sp-transaction-pool/std",
+  "sp-version/std",
 ]

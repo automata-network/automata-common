@@ -450,6 +450,9 @@ sp_api::decl_runtime_apis! {
     }
 }
 
+use pallet_daoportal_rpc_runtime_api::{DAOProposal, Project, ProjectId, ProposalId};
+use pallet_gmetadata_rpc_runtime_api::{GmetadataKey, GmetadataQueryResult, HexBytes};
+
 impl_runtime_apis! {
     impl crate::AttestorApi<Block> for Runtime {
         fn attestor_list() -> Vec<(Vec<u8>, Vec<u8>, u32)> {
@@ -492,6 +495,32 @@ impl_runtime_apis! {
                 Ok(_) => true,
                 Err(_) => false,
             }
+        }
+    }
+    
+    impl pallet_daoportal_rpc_runtime_api::DAOPortalRuntimeApi<Block, AccountId> for Runtime {
+        fn get_projects() -> Vec<(ProjectId, Project<AccountId>)> {
+            DAOPortal::get_projects()
+        }
+
+        fn get_proposals(project_id: ProjectId) -> Vec<(ProjectId, DAOProposal<AccountId>)> {
+            DAOPortal::get_proposals(project_id)
+        }
+
+        fn get_all_proposals() -> Vec<(ProjectId, ProposalId, DAOProposal<AccountId>)> {
+            DAOPortal::get_all_proposals()
+        }
+    }
+
+
+    impl pallet_gmetadata_rpc_runtime_api::GmetadataRuntimeApi<Block> for Runtime {
+        fn query_with_index(
+            index_key: Vec<GmetadataKey>,
+            value_key: GmetadataKey,
+            cursor: HexBytes,
+            limit: u64
+        ) -> GmetadataQueryResult {
+            Gmetadata::query_with_indexes(index_key, value_key, cursor, limit)
         }
     }
 

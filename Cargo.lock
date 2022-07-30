@@ -4104,7 +4104,9 @@ dependencies = [
  "jsonrpc-pubsub 15.1.0",
  "log",
  "node-template-runtime",
+ "pallet-daoportal-rpc",
  "pallet-geode",
+ "pallet-gmetadata-rpc",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
  "sc-cli",
@@ -4148,16 +4150,17 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal",
- "pallet-accounting",
  "pallet-attestor",
  "pallet-aura",
  "pallet-balances",
  "pallet-daoportal",
+ "pallet-daoportal-rpc-runtime-api",
  "pallet-economics",
  "pallet-game",
  "pallet-geode",
  "pallet-geodesession",
  "pallet-gmetadata",
+ "pallet-gmetadata-rpc-runtime-api",
  "pallet-grandpa",
  "pallet-order",
  "pallet-randomness-collective-flip",
@@ -4471,6 +4474,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-daoportal-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core 15.1.0",
+ "jsonrpc-core-client 15.1.0",
+ "jsonrpc-derive 15.1.0",
+ "log",
+ "pallet-daoportal",
+ "pallet-daoportal-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-daoportal-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "pallet-daoportal",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-economics"
 version = "0.1.0"
 dependencies = [
@@ -4614,6 +4646,35 @@ dependencies = [
  "serde_json",
  "sp-core",
  "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-gmetadata-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core 15.1.0",
+ "jsonrpc-core-client 15.1.0",
+ "jsonrpc-derive 15.1.0",
+ "log",
+ "pallet-gmetadata",
+ "pallet-gmetadata-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-gmetadata-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "pallet-gmetadata",
+ "parity-scale-codec",
+ "sp-api",
  "sp-runtime",
  "sp-std",
 ]
