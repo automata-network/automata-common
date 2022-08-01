@@ -45,9 +45,9 @@ pub mod pallet {
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
     pub struct Attestor<AccountId: Ord> {
         /// Attestor's url, geode will get it and communicate with attestor.
-        pub url: Vec<u8>,
+        pub url: Vec<u8>, // use BoundedVec
         /// Attestor's Secp256r1PublicKey
-        pub pubkey: Vec<u8>,
+        pub pubkey: Vec<u8>, // use BoundedVec
         /// Geode being attested by this attestor
         pub applications: BTreeSet<AccountId>,
     }
@@ -282,6 +282,8 @@ pub mod pallet {
                 !<Attestors<T>>::contains_key(&who),
                 Error::<T>::AlreadyRegistered
             );
+            // This checking can be done in SignedExtension
+            // in that way, the tx can be rejected directly in the tx pool
             ensure!(
                 <AttestorsWhiteList<T>>::get(&who),
                 <Error<T>>::AttestorNotWhitelisted
@@ -314,6 +316,8 @@ pub mod pallet {
             // validate inputs
             ensure!(message.len() == 40, Error::<T>::InvalidNotification);
 
+            // I have seen this signature checking logic duplicated in many places
+            // it can moved to a Trait or struct implementation
             let mut attestor = [0u8; 32];
             attestor.copy_from_slice(&message[0..32]);
 

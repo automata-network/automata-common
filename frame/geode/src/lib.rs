@@ -84,10 +84,10 @@ pub mod pallet {
         pub id: AccountId,
         /// Account of the machain provider
         pub provider: AccountId,
-        pub ip: Vec<u8>,
-        pub domain: Vec<u8>,
+        pub ip: Vec<u8>, //use BoundedVec
+        pub domain: Vec<u8>, //use BoundedVec
         /// Extra properties
-        pub props: BTreeMap<Vec<u8>, Vec<u8>>,
+        pub props: BTreeMap<Vec<u8>, Vec<u8>>, //use BoundedVec
         // mark by attestor
         pub healthy_state: HealthyState,
         // mark by geode session
