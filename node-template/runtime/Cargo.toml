@@ -50,7 +50,10 @@ pallet-vesting = { version = "0.1.0", default-features = false, path = "../../fr
 pallet-economics = { version = "0.1.0", default-features = false, path = "../../frame/economics" }
 pallet-game = { version = "0.1.0", default-features = false, path = "../../frame/game" }
 pallet-daoportal = { version = "0.1.0", default-features = false, path = "../../frame/daoportal" }
+pallet-daoportal-rpc-runtime-api = { version = "0.1.0", default-features = false, path = "../../frame/daoportal/rpc/runtime-api" }
 pallet-gmetadata = { version = "0.1.0", default-features = false, path = "../../frame/gmetadata" }
+pallet-gmetadata-rpc-runtime-api = { version = "0.1.0", default-features = false, path = "../../frame/gmetadata/rpc/runtime-api" }
+
 
 [build-dependencies]
 substrate-wasm-builder = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
@@ -76,7 +79,9 @@ std = [
 	"pallet-economics/std",
 	"pallet-game/std",
 	"pallet-daoportal/std",
+	"pallet-daoportal-rpc-runtime-api/std",
 	"pallet-gmetadata/std",
+	"pallet-gmetadata-rpc-runtime-api/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",

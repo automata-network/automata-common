@@ -392,7 +392,36 @@ pub type Executive = frame_executive::Executive<
     AllPallets,
 >;
 
+use pallet_daoportal_rpc_runtime_api::{DAOProposal, Project, ProjectId, ProposalId};
+use pallet_gmetadata_rpc_runtime_api::{GmetadataKey, GmetadataQueryResult, HexBytes};
+
 impl_runtime_apis! {
+    impl pallet_daoportal_rpc_runtime_api::DAOPortalRuntimeApi<Block, AccountId> for Runtime {
+        fn get_projects() -> Vec<(ProjectId, Project<AccountId>)> {
+            DAOPortal::get_projects()
+        }
+
+        fn get_proposals(project_id: ProjectId) -> Vec<(ProjectId, DAOProposal<AccountId>)> {
+            DAOPortal::get_proposals(project_id)
+        }
+
+        fn get_all_proposals() -> Vec<(ProjectId, ProposalId, DAOProposal<AccountId>)> {
+            DAOPortal::get_all_proposals()
+        }
+    }
+
+
+    impl pallet_gmetadata_rpc_runtime_api::GmetadataRuntimeApi<Block> for Runtime {
+        fn query_with_index(
+            index_key: Vec<GmetadataKey>,
+            value_key: GmetadataKey,
+            cursor: HexBytes,
+            limit: u64
+        ) -> GmetadataQueryResult {
+            Gmetadata::query_with_indexes(index_key, value_key, cursor, limit)
+        }
+    }
+
     impl sp_api::Core<Block> for Runtime {
         fn version() -> RuntimeVersion {
             VERSION
