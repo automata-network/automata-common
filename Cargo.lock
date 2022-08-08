@@ -368,9 +368,11 @@ dependencies = [
  "impl-trait-for-tuples 0.2.1",
  "parity-scale-codec",
  "serde",
+ "sp-api",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
+ "sp-std",
  "uint",
 ]
 
@@ -378,8 +380,10 @@ dependencies = [
 name = "automata-traits"
 version = "0.1.0"
 dependencies = [
+ "automata-primitives",
  "frame-support",
  "parity-scale-codec",
+ "sp-std",
 ]
 
 [[package]]
@@ -4104,8 +4108,9 @@ dependencies = [
  "jsonrpc-pubsub 15.1.0",
  "log",
  "node-template-runtime",
+ "pallet-attestor-rpc",
  "pallet-daoportal-rpc",
- "pallet-geode",
+ "pallet-geode-rpc",
  "pallet-gmetadata-rpc",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
@@ -4151,6 +4156,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "hex-literal",
  "pallet-attestor",
+ "pallet-attestor-rpc-runtime-api",
  "pallet-aura",
  "pallet-balances",
  "pallet-daoportal",
@@ -4158,6 +4164,7 @@ dependencies = [
  "pallet-economics",
  "pallet-game",
  "pallet-geode",
+ "pallet-geode-rpc-runtime-api",
  "pallet-geodesession",
  "pallet-gmetadata",
  "pallet-gmetadata-rpc-runtime-api",
@@ -4333,25 +4340,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-accounting"
-version = "0.1.0"
-dependencies = [
- "automata-traits",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-attestor",
- "pallet-balances",
- "pallet-geode",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-attestor"
 version = "0.1.0"
 dependencies = [
@@ -4362,12 +4350,38 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "log",
- "pallet-accounting",
  "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-core",
  "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-attestor-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core 15.1.0",
+ "jsonrpc-core-client 15.1.0",
+ "jsonrpc-derive 15.1.0",
+ "log",
+ "pallet-attestor-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-attestor-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
  "sp-runtime",
  "sp-std",
 ]
@@ -4601,14 +4615,39 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
- "pallet-accounting",
- "pallet-attestor",
  "pallet-balances",
  "parity-scale-codec",
  "serde",
  "serde_json",
  "sp-core",
  "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-geode-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core 15.1.0",
+ "jsonrpc-core-client 15.1.0",
+ "jsonrpc-derive 15.1.0",
+ "log",
+ "pallet-geode-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-geode-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
  "sp-runtime",
  "sp-std",
 ]
@@ -4622,6 +4661,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "pallet-balances",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
@@ -4710,7 +4750,9 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "pallet-balances",
  "parity-scale-codec",
+ "sha2 0.9.9",
  "sp-core",
  "sp-io",
  "sp-runtime",

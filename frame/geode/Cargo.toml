@@ -23,7 +23,6 @@ sp-core = { default-features = false, git = 'https://github.com/automata-network
 
 # local dependencies
 primitives = { package = "automata-primitives", path = "../../primitives", default-features = false }
-pallet-attestor = { default-features = false, path = '../attestor' }
 automata-traits = { package = "automata-traits", path = "../../traits", default-features = false }
 log = { version = "0.4.17" }
 
@@ -31,7 +30,6 @@ log = { version = "0.4.17" }
 sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 sp-io = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 pallet-balances = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-pallet-accounting = { path = "../accounting"}
 
 [features]
 default = ['std']
@@ -43,6 +41,7 @@ std = [
 	'sp-runtime/std',
 	'serde',
 	'serde_json',
+	'sp-core/full_crypto',
 ]
 # runtime-benchmarks = ['frame-benchmarking']
 # Note: frame-support `try-runtime` feature is released after v3.

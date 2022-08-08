@@ -1,4 +1,4 @@
-use frame_support::dispatch::DispatchResult;
+use sp_std::vec::Vec;
 
 pub trait GeodeTrait {
     type AccountId;
@@ -6,11 +6,11 @@ pub trait GeodeTrait {
     type BlockNumber;
     fn on_new_session(session_index: Self::BlockNumber);
     fn on_geode_offline(session_index: Self::BlockNumber);
-    fn on_geode_unhealthy(geode_id: Self::AccountId);
     fn on_order_dispatched(
-        geode_id: Self::AccountId,
         session_index: Self::BlockNumber,
         order_id: Self::Hash,
-    ) -> DispatchResult;
+        num: u32, // the number of geode for this order want to dispatch
+        domain: Vec<u8>,
+    ) -> Vec<Self::AccountId>;
     fn on_expired_check(session_index: Self::BlockNumber);
 }

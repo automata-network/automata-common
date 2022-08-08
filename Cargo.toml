@@ -1,12 +1,16 @@
 [workspace]
 members = [
     "frame/attestor",
+    "frame/attestor/rpc",
+    "frame/attestor/rpc/runtime-api",
     "frame/bridge",
     "frame/bridgetransfer",
     "frame/daoportal",
     "frame/daoportal/rpc",
     "frame/daoportal/rpc/runtime-api",
     "frame/geode",
+    "frame/geode/rpc",
+    "frame/geode/rpc/runtime-api",
     "frame/order",
     "frame/geodesession",
     "frame/transfer",

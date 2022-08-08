@@ -7,18 +7,13 @@
 
 use std::sync::Arc;
 
-use jsonrpc_core::{Error, ErrorCode, Result};
-use jsonrpc_derive::rpc;
-use jsonrpc_pubsub::manager::{RandomStringIdProvider, SubscriptionManager};
 use node_template_runtime::{opaque::Block, AccountId, Balance, Index};
-use sc_client_api::client::BlockchainEvents;
 use sc_rpc::SubscriptionTaskExecutor;
 pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
-use sp_runtime::{traits::Block as BlockT, RuntimeDebug};
 use sp_std::prelude::*;
 
 /// Full client dependencies.
@@ -43,13 +38,15 @@ where
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: BlockBuilder<Block>,
-    C::Api: node_template_runtime::AttestorApi<Block>,
-    C::Api: node_template_runtime::GeodeApi<Block>,
+    C::Api: pallet_attestor_rpc::AttestorRuntimeApi<Block, AccountId>,
+    C::Api: pallet_geode_rpc::GeodeRuntimeApi<Block>,
     C::Api: pallet_daoportal_rpc::DAOPortalRuntimeApi<Block, AccountId>,
     C::Api: pallet_gmetadata_rpc::GmetadataRuntimeApi<Block>,
     P: TransactionPool + 'static,
 {
+    use pallet_attestor_rpc::{AttestorApi, AttestorClient};
     use pallet_daoportal_rpc::{DAOPortalApi, DAOPortalClient};
+    use pallet_geode_rpc::{GeodeApi, GeodeClient};
     use pallet_gmetadata_rpc::{GmetadataApi, GmetadataClient};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
@@ -78,6 +75,12 @@ where
     io.extend_with(GmetadataApi::to_delegate(GmetadataClient::new(
         client.clone(),
     )));
+
+    io.extend_with(AttestorApi::to_delegate(AttestorClient::new(
+        client.clone(),
+    )));
+
+    io.extend_with(GeodeApi::to_delegate(GeodeClient::new(client.clone())));
 
     io
 }

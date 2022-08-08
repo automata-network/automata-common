@@ -1,6 +1,6 @@
 use jsonrpc_core::{Error, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use node_template_runtime::opaque::Block;
+pub use pallet_geode_rpc_runtime_api::GeodeRuntimeApi;
 use sp_api::BlockId;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -10,7 +10,7 @@ use std::sync::Arc;
 const RUNTIME_ERROR: i64 = 1;
 
 #[rpc]
-pub trait GeodeServer<BlockHash> {
+pub trait GeodeApi<BlockHash> {
     #[rpc(name = "geode_ready")]
     fn geode_ready(&self, message: Vec<u8>, signature_raw_bytes: Vec<u8>) -> Result<bool>;
     #[rpc(name = "geode_finalizing")]
@@ -22,28 +22,38 @@ pub trait GeodeServer<BlockHash> {
         -> Result<bool>;
 }
 
-pub struct GeodeApi<C> {
+pub struct GeodeClient<C, P> {
     client: Arc<C>,
+    _marker: std::marker::PhantomData<P>,
 }
 
-impl<C> GeodeApi<C> {
+impl<C, P> GeodeClient<C, P> {
     pub fn new(client: Arc<C>) -> Self {
-        GeodeApi { client }
+        Self {
+            client,
+            _marker: Default::default(),
+        }
     }
 }
 
-impl<C> GeodeServer<<Block as BlockT>::Hash> for GeodeApi<C>
+impl<C, Block> GeodeApi<<Block as BlockT>::Hash> for GeodeClient<C, Block>
 where
-    C: Send + Sync + 'static,
-    C: ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-    C::Api: node_template_runtime::GeodeApi<Block>,
+    Block: BlockT,
+    C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
+    C::Api: GeodeRuntimeApi<Block>,
 {
     fn geode_ready(&self, message: Vec<u8>, signature_raw_bytes: Vec<u8>) -> Result<bool> {
-        use node_template_runtime::GeodeApi;
         let api = self.client.runtime_api();
         let best = self.client.info().best_hash;
         let at = BlockId::hash(best);
         let mut signature = [0_u8; 64];
+        if signature_raw_bytes.len() != signature.len() {
+            return Err(Error {
+                code: ErrorCode::ServerError(RUNTIME_ERROR),
+                message: "Runtime unable to send heartbeat.".into(),
+                data: Some("invalid signature".into()),
+            });
+        }
         signature.copy_from_slice(&signature_raw_bytes);
         let result = api
             .unsigned_geode_ready(&at, message, signature)
@@ -56,11 +66,17 @@ where
     }
 
     fn geode_finalizing(&self, message: Vec<u8>, signature_raw_bytes: Vec<u8>) -> Result<bool> {
-        use node_template_runtime::GeodeApi;
         let api = self.client.runtime_api();
         let best = self.client.info().best_hash;
         let at = BlockId::hash(best);
         let mut signature = [0_u8; 64];
+        if signature_raw_bytes.len() != signature.len() {
+            return Err(Error {
+                code: ErrorCode::ServerError(RUNTIME_ERROR),
+                message: "Runtime unable to send heartbeat.".into(),
+                data: Some("invalid signature".into()),
+            });
+        }
         signature.copy_from_slice(&signature_raw_bytes);
         let result = api
             .unsigned_geode_finalizing(&at, message, signature)
@@ -73,11 +89,17 @@ where
     }
 
     fn geode_finalized(&self, message: Vec<u8>, signature_raw_bytes: Vec<u8>) -> Result<bool> {
-        use node_template_runtime::GeodeApi;
         let api = self.client.runtime_api();
         let best = self.client.info().best_hash;
         let at = BlockId::hash(best);
         let mut signature = [0_u8; 64];
+        if signature_raw_bytes.len() != signature.len() {
+            return Err(Error {
+                code: ErrorCode::ServerError(RUNTIME_ERROR),
+                message: "Runtime unable to send heartbeat.".into(),
+                data: Some("invalid signature".into()),
+            });
+        }
         signature.copy_from_slice(&signature_raw_bytes);
         let result = api
             .unsigned_geode_finalized(&at, message, signature)
@@ -94,11 +116,17 @@ where
         message: Vec<u8>,
         signature_raw_bytes: Vec<u8>,
     ) -> Result<bool> {
-        use node_template_runtime::GeodeApi;
         let api = self.client.runtime_api();
         let best = self.client.info().best_hash;
         let at = BlockId::hash(best);
         let mut signature = [0_u8; 64];
+        if signature_raw_bytes.len() != signature.len() {
+            return Err(Error {
+                code: ErrorCode::ServerError(RUNTIME_ERROR),
+                message: "Runtime unable to send heartbeat.".into(),
+                data: Some("invalid signature".into()),
+            });
+        }
         signature.copy_from_slice(&signature_raw_bytes);
         let result = api
             .unsigned_geode_finalize_failed(&at, message, signature)

@@ -46,11 +46,13 @@ frame-system-benchmarking = {default-features = false, git = 'https://github.com
 hex-literal = {version = "0.3.1", optional = true}
 
 pallet-attestor = {version = "0.1.0", default-features = false, path = "../../frame/attestor"}
+pallet-attestor-rpc-runtime-api = {version = "0.1.0", default-features = false, path = "../../frame/attestor/rpc/runtime-api"}
 pallet-daoportal = {version = "0.1.0", default-features = false, path = "../../frame/daoportal"}
 pallet-daoportal-rpc-runtime-api = {version = "0.1.0", default-features = false, path = "../../frame/daoportal/rpc/runtime-api"}
 pallet-economics = {version = "0.1.0", default-features = false, path = "../../frame/economics"}
 pallet-game = {version = "0.1.0", default-features = false, path = "../../frame/game"}
 pallet-geode = {version = "0.1.0", default-features = false, path = "../../frame/geode"}
+pallet-geode-rpc-runtime-api = {version = "0.1.0", default-features = false, path = "../../frame/geode/rpc/runtime-api"}
 pallet-geodesession = {version = "0.1.0", default-features = false, path = "../../frame/geodesession"}
 pallet-gmetadata = {version = "0.1.0", default-features = false, path = "../../frame/gmetadata"}
 pallet-gmetadata-rpc-runtime-api = {version = "0.1.0", default-features = false, path = "../../frame/gmetadata/rpc/runtime-api"}
@@ -96,6 +98,10 @@ std = [
   "pallet-vesting/std",
   "pallet-economics/std",
   "pallet-game/std",
+  "pallet-geode/std",
+  "pallet-geode-rpc-runtime-api/std",
+  "pallet-attestor/std",
+  "pallet-attestor-rpc-runtime-api/std",
   "pallet-daoportal/std",
   "pallet-daoportal-rpc-runtime-api/std",
   "pallet-gmetadata/std",

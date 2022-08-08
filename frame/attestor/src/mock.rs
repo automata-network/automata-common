@@ -102,7 +102,7 @@ impl attestor::Config for Test {
 impl automata_traits::attestor::ApplicationTrait for Test {
     type AccountId = u64;
 
-    fn application_unhealthy(who: Self::AccountId) -> DispatchResult {
+    fn application_unhealthy(who: Self::AccountId, is_attestor_down: bool) -> DispatchResult {
         Ok(().into())
     }
 

@@ -373,7 +373,8 @@ pub mod pallet {
                     AttestorsOfApplications::<T>::insert(&application_id, &attestors);
                 }
                 if minimum_attestor_num > attestors.len() {
-                    let _ = T::ApplicationHandler::application_unhealthy(application_id.clone());
+                    let _ =
+                        T::ApplicationHandler::application_unhealthy(application_id.clone(), true);
                 }
             }
 
@@ -443,7 +444,7 @@ pub mod pallet {
             attestors.remove(&who);
 
             if (attestors.len() as u16) < <MinimumAttestorNum<T>>::get() {
-                T::ApplicationHandler::application_unhealthy(application_id.clone())?;
+                T::ApplicationHandler::application_unhealthy(application_id.clone(), false)?;
             }
 
             if attestors.is_empty() {

@@ -9,6 +9,8 @@ use sp_runtime::{
 };
 
 pub mod attestor;
+pub mod geodesession;
+pub mod order;
 
 /// An index to a block.
 pub type BlockNumber = u32;
