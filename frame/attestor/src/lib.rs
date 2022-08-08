@@ -45,9 +45,9 @@ pub mod pallet {
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
     pub struct Attestor<AccountId: Ord> {
         /// Attestor's url, geode will get it and communicate with attestor.
-        pub url: Vec<u8>,
+        pub url: BoundedVec<u8, ConstU32<1024>>,
         /// Attestor's Secp256r1PublicKey
-        pub pubkey: Vec<u8>,
+        pub pubkey: BoundedVec<u8, ConstU32<64>>,
         /// Geode being attested by this attestor
         pub applications: BTreeSet<AccountId>,
     }
@@ -98,6 +98,11 @@ pub mod pallet {
     #[pallet::type_value]
     pub fn DefaultMinimumAttestorNum<T: Config>() -> u16 {
         1
+    }
+
+    #[pallet::type_value]
+    pub fn MaxVectorSize<T: Config>() -> u32 {
+        1024
     }
 
     #[pallet::storage]
@@ -179,6 +184,8 @@ pub mod pallet {
         NotAttestingFor,
         /// Attestor has already attest the application before
         DuplicateAttestation,
+        ///
+        InvalidArgument,
     }
 
     #[pallet::validate_unsigned]
@@ -235,7 +242,7 @@ pub mod pallet {
                     }
                 }
                 for key in expired_attestors {
-                    Self::attestor_remove(RawOrigin::Signed(key).into());
+                    let _ = Self::attestor_remove(RawOrigin::Signed(key).into());
                 }
             }
             0
@@ -288,8 +295,8 @@ pub mod pallet {
             );
 
             let attestor = AttestorOf::<T> {
-                url,
-                pubkey,
+                url: Self::to_bounded(url)?,
+                pubkey: Self::to_bounded(pubkey)?,
                 applications: BTreeSet::new(),
             };
             <Attestors<T>>::insert(&who, attestor);
@@ -347,7 +354,7 @@ pub mod pallet {
                 Error::<T>::InvalidAttestor
             );
             let mut attestor = <Attestors<T>>::get(&who);
-            attestor.url = url;
+            attestor.url = Self::to_bounded(url)?;
             <Attestors<T>>::insert(&who, attestor);
             Self::deposit_event(Event::AttestorUpdate(who));
             Ok(().into())
@@ -480,14 +487,24 @@ pub mod pallet {
             result
         }
 
+        fn to_bounded<S>(val: Vec<u8>) -> Result<BoundedVec<u8, S>, DispatchError>
+        where
+            S: Get<u32>,
+        {
+            match val.try_into() {
+                Ok(val) => Ok(val),
+                Err(_) => Err(<Error<T>>::InvalidArgument.into()),
+            }
+        }
+
         /// Return attestors' url and pubkey list for rpc.
         pub fn attestor_list() -> Vec<(Vec<u8>, Vec<u8>, u32)> {
             let mut res = Vec::<(Vec<u8>, Vec<u8>, u32)>::new();
             <Attestors<T>>::iter()
                 .map(|(_, attestor)| {
                     res.push((
-                        attestor.url.clone(),
-                        attestor.pubkey,
+                        attestor.url.clone().into(),
+                        attestor.pubkey.into(),
                         attestor.applications.len() as u32,
                     ));
                 })
@@ -502,7 +519,7 @@ pub mod pallet {
             ids.iter()
                 .map(|id| {
                     let att = <Attestors<T>>::get(&id);
-                    res.push((att.url, att.pubkey))
+                    res.push((att.url.into(), att.pubkey.into()))
                 })
                 .all(|_| true);
             res

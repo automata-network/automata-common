@@ -24,6 +24,7 @@ pub mod pallet {
     use sp_core::sr25519::{Public, Signature};
     use sp_runtime::RuntimeDebug;
     use sp_std::collections::btree_map::BTreeMap;
+    use sp_std::convert::TryInto;
     use sp_std::prelude::*;
 
     #[cfg(feature = "full_crypto")]
@@ -178,6 +179,7 @@ pub mod pallet {
         InvalidMessage,
         NotSaveGeode,
         WaitingForOffline,
+        InvalidArgument,
     }
 
     #[pallet::pallet]
@@ -591,6 +593,16 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        fn to_bounded<S>(val: Vec<u8>) -> Result<BoundedVec<u8, S>, DispatchError>
+        where
+            S: Get<u32>,
+        {
+            match val.try_into() {
+                Ok(val) => Ok(val),
+                Err(_) => Err(<Error<T>>::InvalidArgument.into()),
+            }
+        }
+
         fn get_previous_key<S>(session_index: T::BlockNumber) -> Option<Vec<u8>>
         where
             S: frame_support::storage::StorageValue<(T::BlockNumber, Vec<u8>)>,
