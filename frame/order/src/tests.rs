@@ -12,6 +12,7 @@ fn default_order(provider: u64) -> OrderOf<Test> {
     OrderOf::<Test> {
         order_id,
         binary: "binary".into(),
+        encrypted: false,
         domain: "domain".into(),
         name: "name".into(),
         provider,
