@@ -4155,6 +4155,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal",
+ "log",
  "pallet-attestor",
  "pallet-attestor-rpc-runtime-api",
  "pallet-aura",

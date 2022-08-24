@@ -17,9 +17,12 @@ pub trait GeodeApi<BlockHash> {
     fn geode_finalizing(&self, message: Vec<u8>, signature_raw_bytes: Vec<u8>) -> Result<bool>;
     #[rpc(name = "geode_finalized")]
     fn geode_finalized(&self, message: Vec<u8>, signature_raw_bytes: Vec<u8>) -> Result<bool>;
-    #[rpc(name = "geode_finalize_failed")]
-    fn geode_finalize_failed(&self, message: Vec<u8>, signature_raw_bytes: Vec<u8>)
-        -> Result<bool>;
+    #[rpc(name = "geode_initialize_failed")]
+    fn geode_initialize_failed(
+        &self,
+        message: Vec<u8>,
+        signature_raw_bytes: Vec<u8>,
+    ) -> Result<bool>;
 }
 
 pub struct GeodeClient<C, P> {
@@ -111,7 +114,7 @@ where
         Ok(result)
     }
 
-    fn geode_finalize_failed(
+    fn geode_initialize_failed(
         &self,
         message: Vec<u8>,
         signature_raw_bytes: Vec<u8>,
@@ -129,10 +132,10 @@ where
         }
         signature.copy_from_slice(&signature_raw_bytes);
         let result = api
-            .unsigned_geode_finalize_failed(&at, message, signature)
+            .unsigned_geode_initialize_failed(&at, message, signature)
             .map_err(|e| Error {
                 code: ErrorCode::ServerError(RUNTIME_ERROR),
-                message: "Runtime unable to call geode_finalized.".into(),
+                message: "Runtime unable to geode_initialize_failed.".into(),
                 data: Some(format!("{:?}", e).into()),
             })?;
         Ok(result)

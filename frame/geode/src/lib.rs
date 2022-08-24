@@ -155,7 +155,13 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         RegisterGeode(T::AccountId),
+        // DispatchOrder(T::AccountId, Vec<u8>),
         RemoveGeode(T::AccountId),
+        GeodeIdle(T::AccountId),
+        GeodePending(T::AccountId),
+        GeodeWorking(T::AccountId),
+        GeodeFinalizing(T::AccountId),
+        GeodeExiting(T::AccountId),
     }
 
     #[pallet::error]
@@ -280,7 +286,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let (acc, order_id) =
                 Self::decode_message(&message, &signature_raw_bytes, |mut data| {
-                    ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                    ensure!(data.len() == 32, Error::<T>::InvalidMessage);
                     Ok(<T::Hash>::decode(&mut data).unwrap_or_default())
                 })?;
             Self::geode_ready(RawOrigin::Signed(acc).into(), order_id)
@@ -323,7 +329,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let (acc, order_id) =
                 Self::decode_message(&message, &signature_raw_bytes, |mut data| {
-                    ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                    ensure!(data.len() == 32, Error::<T>::InvalidMessage);
                     Ok(<T::Hash>::decode(&mut data).unwrap_or_default())
                 })?;
             Self::geode_finalizing(RawOrigin::Signed(acc).into(), order_id)
@@ -359,7 +365,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let (acc, order_id) =
                 Self::decode_message(&message, &signature_raw_bytes, |mut data| {
-                    ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                    ensure!(data.len() == 32, Error::<T>::InvalidMessage);
                     Ok(<T::Hash>::decode(&mut data).unwrap_or_default())
                 })?;
             Self::geode_initialize_failed(RawOrigin::Signed(acc).into(), order_id)
@@ -390,7 +396,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let (acc, order_id) =
                 Self::decode_message(&message, &signature_raw_bytes, |mut data| {
-                    ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                    ensure!(data.len() == 32, Error::<T>::InvalidMessage);
                     Ok(<T::Hash>::decode(&mut data).unwrap_or_default())
                 })?;
             Self::geode_finalized(RawOrigin::Signed(acc).into(), order_id)
@@ -418,38 +424,6 @@ pub mod pallet {
                 }
                 _ => return Err(Error::<T>::NotFinalizingState.into()),
             })?;
-            Ok(().into())
-        }
-
-        #[pallet::weight(0)]
-        pub fn unsigned_geode_finalize_failed(
-            _: OriginFor<T>,
-            message: Vec<u8>,
-            signature_raw_bytes: [u8; 64],
-        ) -> DispatchResultWithPostInfo {
-            let (acc, order_id) =
-                Self::decode_message(&message, &signature_raw_bytes, |mut data| {
-                    ensure!(data.len() == 8, Error::<T>::InvalidMessage);
-                    Ok(<T::Hash>::decode(&mut data).unwrap_or_default())
-                })?;
-            Self::geode_finalize_failed(RawOrigin::Signed(acc).into(), order_id)
-        }
-
-        /// Called when geode failed to finalize.
-        /// state: finalizing -> await idle
-        /// healthy: ?
-        #[pallet::weight(0)]
-        pub fn geode_finalize_failed(
-            origin: OriginFor<T>,
-            order_id: T::Hash,
-        ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            let geode = Self::get_geode(&who)?;
-            ensure!(
-                geode.order_id == Some(order_id),
-                Error::<T>::OrderIdNotMatch
-            );
-            <FailRequests<T>>::insert(geode.id.clone(), ());
             Ok(().into())
         }
     }
@@ -490,14 +464,22 @@ pub mod pallet {
                 match geode.working_state {
                     WorkingState::Idle => {
                         <IdleGeodes<T>>::insert(geode.id.clone(), ());
+                        Self::deposit_event(Event::GeodeIdle(geode.id.clone()));
                     }
                     WorkingState::Pending { .. } => {
                         <PendingGeodes<T>>::insert(geode.id.clone(), ());
+                        Self::deposit_event(Event::GeodePending(geode.id.clone()));
                     }
                     WorkingState::Exiting { .. } => {
                         <ExitingGeodes<T>>::insert(geode.id.clone(), ());
+                        Self::deposit_event(Event::GeodeExiting(geode.id.clone()));
                     }
-                    _ => {}
+                    WorkingState::Finalizing { .. } => {
+                        Self::deposit_event(Event::GeodeFinalizing(geode.id.clone()));
+                    }
+                    WorkingState::Working { .. } => {
+                        Self::deposit_event(Event::GeodeWorking(geode.id.clone()));
+                    }
                 }
                 match origin_working_state {
                     WorkingState::Idle => {
@@ -577,7 +559,7 @@ pub mod pallet {
                     WorkingState::Idle => match geode.healthy_state {
                         HealthyState::Healthy => {
                             geode.working_state = WorkingState::Pending { session_index };
-                            geode.order_id = Some(order_id);
+                            geode.order_id = Some(order_id.clone());
                             geode.domain = domain;
                         }
                         HealthyState::Unhealthy => {
@@ -586,6 +568,7 @@ pub mod pallet {
                     },
                     _ => return Err(Error::<T>::NotPendingState.into()),
                 }
+                // Self::deposit_event(Event::DispatchOrder(geode.id.clone(), order_id.to_string().into()));
                 Ok(())
             })?;
             Ok(().into())
@@ -593,16 +576,6 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        fn to_bounded<S>(val: Vec<u8>) -> Result<BoundedVec<u8, S>, DispatchError>
-        where
-            S: Get<u32>,
-        {
-            match val.try_into() {
-                Ok(val) => Ok(val),
-                Err(_) => Err(<Error<T>>::InvalidArgument.into()),
-            }
-        }
-
         fn get_previous_key<S>(session_index: T::BlockNumber) -> Option<Vec<u8>>
         where
             S: frame_support::storage::StorageValue<(T::BlockNumber, Vec<u8>)>,
@@ -858,8 +831,8 @@ pub mod pallet {
 
         unsigned_rpc! {rpc_unsigned_geode_ready, unsigned_geode_ready}
         unsigned_rpc! {rpc_unsigned_geode_finalizing, unsigned_geode_finalizing}
-        unsigned_rpc! {rpc_unsigned_geode_finalize_failed, unsigned_geode_finalize_failed}
         unsigned_rpc! {rpc_unsigned_geode_finalized, unsigned_geode_finalized}
+        unsigned_rpc! {rpc_unsigned_geode_initialize_failed, unsigned_geode_initialize_failed}
     }
 
     #[pallet::validate_unsigned]
@@ -871,28 +844,28 @@ pub mod pallet {
                 Call::unsigned_geode_ready(msg, signature) => (
                     "Automata/geode/unsigned_geode_ready",
                     Self::decode_message_in_validate(&msg, &signature, |data| {
-                        ensure!(data.len() == 8, Error::<T>::InvalidMessage);
+                        ensure!(data.len() == 32, Error::<T>::InvalidMessage);
                         Ok(())
                     })?,
                 ),
                 Call::unsigned_geode_finalizing(msg, signature) => (
                     "Automata/geode/unsigned_geode_finalizing",
                     Self::decode_message_in_validate(&msg, &signature, |data| {
-                        ensure!(data.len() == 8, <Error<T>>::InvalidMessage);
+                        ensure!(data.len() == 32, <Error<T>>::InvalidMessage);
                         Ok(())
                     })?,
                 ),
                 Call::unsigned_geode_finalized(msg, signature) => (
                     "Automata/geode/unsigned_geode_finalized",
                     Self::decode_message_in_validate(&msg, &signature, |data| {
-                        ensure!(data.len() == 8, <Error<T>>::InvalidMessage);
+                        ensure!(data.len() == 32, <Error<T>>::InvalidMessage);
                         Ok(())
                     })?,
                 ),
-                Call::unsigned_geode_finalize_failed(msg, signature) => (
-                    "Automata/geode/unsigned_geode_finalize_failed",
+                Call::unsigned_geode_initialize_failed(msg, signature) => (
+                    "Automata/geode/unsigned_geode_initialize_failed",
                     Self::decode_message_in_validate(&msg, &signature, |data| {
-                        ensure!(data.len() > 8, <Error<T>>::InvalidMessage);
+                        ensure!(data.len() == 32, <Error<T>>::InvalidMessage);
                         Ok(())
                     })?,
                 ),

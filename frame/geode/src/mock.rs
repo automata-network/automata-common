@@ -118,10 +118,15 @@ impl automata_traits::order::OrderTrait for Test {
     }
 }
 
+parameter_types! {
+    pub const MaxGeodeProcessOneBlock: u32 = 1;
+}
+
 impl pallet_geode::Config for Test {
     type Event = Event;
     type AttestorHandler = Test;
     type OrderHandler = Test;
+    type MaxGeodeProcessOneBlock = MaxGeodeProcessOneBlock;
 }
 
 // Build genesis storage according to the mock runtime.

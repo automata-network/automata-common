@@ -483,8 +483,8 @@ impl_runtime_apis! {
                 Err(_) => false,
             }
         }
-        fn unsigned_geode_finalize_failed(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool {
-            match Geode::rpc_unsigned_geode_finalize_failed(message, signature_raw_bytes) {
+        fn unsigned_geode_initialize_failed(message: Vec<u8>, signature_raw_bytes: [u8; 64]) -> bool {
+            match Geode::rpc_unsigned_geode_initialize_failed(message, signature_raw_bytes) {
                 Ok(_) => true,
                 Err(_) => false,
             }

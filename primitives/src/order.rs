@@ -15,9 +15,10 @@ pub type OrderOf<T> = Order<
 pub struct Order<Hash, BlockNumber, AccountId> {
     pub order_id: Hash,
     pub binary: Vec<u8>,
+    // specifies if the binary is encrypted
+    pub encrypted: bool,
     pub domain: Vec<u8>,
     pub name: Vec<u8>,
-    pub provider: AccountId,
     // token num that users are willing to pay
     pub price: U256,
     pub start_session_id: BlockNumber,
@@ -27,6 +28,7 @@ pub struct Order<Hash, BlockNumber, AccountId> {
     pub state: OrderState,
     // price - refund_unit / duration * geode_num * price
     pub refund_unit: u32,
+    pub provider: AccountId,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Copy)]

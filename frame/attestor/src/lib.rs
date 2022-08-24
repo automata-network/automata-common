@@ -45,9 +45,9 @@ pub mod pallet {
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
     pub struct Attestor<AccountId: Ord> {
         /// Attestor's url, geode will get it and communicate with attestor.
-        pub url: BoundedVec<u8, ConstU32<1024>>,
+        pub url: Vec<u8>,
         /// Attestor's Secp256r1PublicKey
-        pub pubkey: BoundedVec<u8, ConstU32<64>>,
+        pub pubkey: Vec<u8>,
         /// Geode being attested by this attestor
         pub applications: BTreeSet<AccountId>,
     }
@@ -98,11 +98,6 @@ pub mod pallet {
     #[pallet::type_value]
     pub fn DefaultMinimumAttestorNum<T: Config>() -> u16 {
         1
-    }
-
-    #[pallet::type_value]
-    pub fn MaxVectorSize<T: Config>() -> u32 {
-        1024
     }
 
     #[pallet::storage]
@@ -295,8 +290,8 @@ pub mod pallet {
             );
 
             let attestor = AttestorOf::<T> {
-                url: Self::to_bounded(url)?,
-                pubkey: Self::to_bounded(pubkey)?,
+                url,
+                pubkey,
                 applications: BTreeSet::new(),
             };
             <Attestors<T>>::insert(&who, attestor);
@@ -354,7 +349,7 @@ pub mod pallet {
                 Error::<T>::InvalidAttestor
             );
             let mut attestor = <Attestors<T>>::get(&who);
-            attestor.url = Self::to_bounded(url)?;
+            attestor.url = url;
             <Attestors<T>>::insert(&who, attestor);
             Self::deposit_event(Event::AttestorUpdate(who));
             Ok(().into())
@@ -485,16 +480,6 @@ pub mod pallet {
                 result.insert(account_id, attestor.applications.len());
             });
             result
-        }
-
-        fn to_bounded<S>(val: Vec<u8>) -> Result<BoundedVec<u8, S>, DispatchError>
-        where
-            S: Get<u32>,
-        {
-            match val.try_into() {
-                Ok(val) => Ok(val),
-                Err(_) => Err(<Error<T>>::InvalidArgument.into()),
-            }
         }
 
         /// Return attestors' url and pubkey list for rpc.

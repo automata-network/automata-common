@@ -59,6 +59,7 @@ pallet-gmetadata-rpc-runtime-api = {version = "0.1.0", default-features = false,
 pallet-order = {version = "0.1.0", default-features = false, path = "../../frame/order"}
 pallet-template = {version = "3.0.0", default-features = false, path = "../pallets/template"}
 pallet-vesting = {version = "0.1.0", default-features = false, path = "../../frame/vesting"}
+log = { version = "0.4.17" }
 
 [build-dependencies]
 substrate-wasm-builder = {git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10'}
