@@ -8,10 +8,13 @@ license = "Apache-2.0"
 [dependencies]
 codec = { default-features = false, features = ['derive'], package = 'parity-scale-codec', version = '2.0.0' }
 frame-support = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+primitives = { package = "automata-primitives", path = "../primitives", default-features = false }
+sp-std = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 
 [features]
 default = ["std"]
 std = [
 	"codec/std",
+	"sp-std/std",
 	"frame-support/std",
 ]

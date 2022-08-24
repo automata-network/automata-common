@@ -1,11 +1,10 @@
-use crate as pallet_geode;
-use automata_traits::{AttestorAccounting, GeodeAccounting};
+use crate as pallet_order;
 use codec::Encode;
 use frame_support::dispatch::DispatchResult;
 use frame_support::dispatch::DispatchResultWithPostInfo;
 use frame_support::parameter_types;
 use frame_system as system;
-use primitives::order::OrderState;
+use primitives::order::{OrderOf, OrderState};
 use primitives::*;
 use sp_core::H256;
 use sp_runtime::{
@@ -16,7 +15,7 @@ pub const INIT_BALANCE: u64 = 100_100_100;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-pub type AccountId = u64;
+type AccountId = u64;
 type BlockNumber = u64;
 
 // Configure a mock runtime to test the pallet.
@@ -28,7 +27,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-        GeodeModule: pallet_geode::{Pallet, Call, Storage, Event<T>},
+        OrderModule: pallet_order::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -81,52 +80,44 @@ impl pallet_balances::Config for Test {
     type ReserveIdentifier = [u8; 8];
 }
 
-impl<C> frame_system::offchain::SendTransactionTypes<C> for Test
-where
-    Call: From<C>,
-{
-    type Extrinsic = UncheckedExtrinsic;
-    type OverarchingCall = Call;
-}
-
-impl automata_traits::attestor::AttestorTrait for Test {
-    type AccountId = AccountId;
-    fn is_abnormal_mode() -> bool {
-        false
-    }
-    fn check_healthy(app_id: &Self::AccountId) -> bool {
-        false
-    }
-}
-
-impl automata_traits::order::OrderTrait for Test {
-    type BlockNumber = BlockNumber;
-    type Hash = H256;
-    type AccountId = AccountId;
-    fn is_order_expired(_order_id: Self::Hash, _session_index: Self::BlockNumber) -> bool {
-        false
-    }
-    fn on_new_session(session_index: Self::BlockNumber) {}
-    fn on_orders_dispatch(session_index: Self::BlockNumber) {}
-    fn on_emergency_order_dispatch(session_index: Self::BlockNumber) {}
-    fn on_order_state(
-        geode_id: Self::AccountId,
-        order_id: Self::Hash,
-        target_state: OrderState,
-    ) -> DispatchResult {
-        Ok(())
-    }
-}
-
 parameter_types! {
-    pub const MaxGeodeProcessOneBlock: u32 = 1;
+    pub const MaxOrderProcessOneBlock: BlockNumber = 1;
 }
 
-impl pallet_geode::Config for Test {
+impl pallet_order::Config for Test {
     type Event = Event;
-    type AttestorHandler = Test;
-    type OrderHandler = Test;
-    type MaxGeodeProcessOneBlock = MaxGeodeProcessOneBlock;
+    type GeodeHandler = Test;
+    type MaxOrderProcessOneBlock = MaxOrderProcessOneBlock;
+}
+
+impl automata_traits::geode::GeodeTrait for Test {
+    type AccountId = AccountId;
+    type Hash = Hash;
+    type BlockNumber = BlockNumber;
+    fn on_new_session(session_index: Self::BlockNumber) {}
+    fn on_geode_offline(session_index: Self::BlockNumber) {}
+    fn on_order_dispatched(
+        session_index: Self::BlockNumber,
+        order_id: Self::Hash,
+        mut num: u32,
+        domain: Vec<u8>,
+    ) -> Vec<Self::AccountId> {
+        use std::time::SystemTime;
+        let ts = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let start = ts as u32;
+        let mut ids = Vec::new();
+        if num > 3 {
+            num = 3;
+        }
+        for i in start..(start + num) {
+            ids.push(i as _);
+        }
+        ids
+    }
+    fn on_expired_check(session_index: Self::BlockNumber) {}
 }
 
 // Build genesis storage according to the mock runtime.
@@ -145,24 +136,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     ext
 }
 
-pub fn events() -> Vec<Event> {
-    let evt = System::events()
-        .into_iter()
-        .map(|evt| evt.event)
-        .collect::<Vec<_>>();
-
-    System::reset_events();
-
-    evt
-}
-
 pub fn gen_hash(val: u8) -> H256 {
     let mut hash = H256::default();
     hash.0[0] = val;
     hash
 }
 
-use automata_traits::geode::GeodeTrait;
+use automata_traits::order::OrderTrait;
 use primitives::geodesession::GeodeSessionPhase;
 
 pub struct GeodeSession {
@@ -173,7 +153,7 @@ pub struct GeodeSession {
 impl GeodeSession {
     pub fn new() -> Self {
         Self {
-            idx: 0,
+            idx: 100,
             phase: None,
         }
     }
@@ -186,7 +166,7 @@ impl GeodeSession {
     pub fn next_phase_to(&mut self, phase: GeodeSessionPhase) {
         loop {
             self.next_phase();
-            println!("session: {:?} -> {:?}", self.idx, self.phase.unwrap());
+            // println!("session: {:?} -> {:?}", self.idx, self.phase.unwrap());
             if self.phase == Some(phase) {
                 break;
             }
@@ -206,16 +186,14 @@ impl GeodeSession {
         };
         match phase {
             GeodeSessionPhase::SessionInitialize => {
-                GeodeModule::on_new_session(self.idx);
-            }
-            GeodeSessionPhase::ExpiredCheck => {
-                GeodeModule::on_expired_check(self.idx);
+                OrderModule::on_new_session(self.idx);
             }
             GeodeSessionPhase::GeodeOffline => {
-                GeodeModule::on_geode_offline(self.idx);
+                OrderModule::on_emergency_order_dispatch(self.idx);
             }
+            GeodeSessionPhase::ExpiredCheck => {}
             GeodeSessionPhase::OrderDispatch => {
-                // GeodeModule::on_orders_dispatch(self.idx);
+                OrderModule::on_orders_dispatch(self.idx);
             }
         };
         self.phase = Some(phase);
@@ -226,20 +204,88 @@ impl GeodeSession {
 macro_rules! assert_state {
     ($order_id:expr, $state:expr) => {
         assert_eq!(
-            <pallet_geode::Geodes<Test>>::get($order_id)
-                .unwrap()
-                .working_state,
+            <pallet_order::Orders<Test>>::get($order_id).unwrap().state,
             $state
         );
     };
 }
 
 #[macro_export]
-macro_rules! assert_geode {
+macro_rules! assert_order {
     ($order_id:expr, $field:ident, $state:expr) => {
         assert_eq!(
-            <pallet_geode::Geodes<Test>>::get($order_id).unwrap().$field,
+            <pallet_order::Orders<Test>>::get($order_id).unwrap().$field,
             $state
         );
     };
+}
+
+#[macro_export]
+macro_rules! set_order_state {
+    ($service_idx:expr, $order_id:expr, $state:expr) => {
+        OrderModule::on_order_state(
+            {
+                let services = <pallet_order::OrderServices<Test>>::get($order_id);
+                services.get($service_idx).unwrap().0
+            },
+            $order_id,
+            $state,
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! assert_service_state {
+    ($order_id:expr, $states:expr) => {{
+        let order_services = <pallet_order::OrderServices<Test>>::get($order_id);
+        assert_eq!($states.len(), order_services.len());
+        for idx in 0..$states.len() {
+            assert_eq!(
+                $states[idx], order_services[idx].1,
+                "states not match in {} => want {:?}, got {:?}",
+                idx, $states[idx], order_services[idx].1
+            );
+        }
+    }};
+    ($order_id:expr, $state:expr, $len:expr) => {{
+        let order_services = <pallet_order::OrderServices<Test>>::get($order_id);
+        let mut cnt = 0;
+        for order_service in order_services {
+            if order_service.1 == $state {
+                cnt += 1;
+            }
+        }
+        assert_eq!(cnt, $len, "want {} state={:?}, got {}", $len, $state, cnt);
+    }};
+}
+
+#[macro_export]
+macro_rules! create_order {
+    ($origin:expr, $order:expr) => {{
+        use super::pallet::Event as PalletEvent;
+        assert_ok!(OrderModule::create_order($origin, $order));
+        let mut last_id = None;
+        let events = events();
+        for event in events {
+            match event {
+                Event::OrderModule(PalletEvent::OrderSubmitted(_, b)) => {
+                    last_id = Some(b);
+                }
+                _ => {}
+            }
+        }
+        let order: OrderOf<Test> = <pallet_order::Orders<Test>>::get(&last_id.unwrap()).unwrap();
+        order
+    }};
+}
+
+pub fn events() -> Vec<Event> {
+    let evt = System::events()
+        .into_iter()
+        .map(|evt| evt.event)
+        .collect::<Vec<_>>();
+
+    // System::reset_events();
+
+    evt
 }

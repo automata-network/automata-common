@@ -1,10 +1,10 @@
 [package]
 authors = ["Automata Team"]
-description = 'FRAME pallet for defining geode related logic.'
+description = 'FRAME pallet for manager geode sessions.'
 edition = '2018'
 homepage = 'https://www.ata.network/'
 license = 'Apache-2.0'
-name = 'pallet-geode'
+name = 'pallet-order'
 repository = "https://github.com/automata-network/automata"
 version = '0.1.0'
 
@@ -12,19 +12,16 @@ version = '0.1.0'
 targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
-serde_json = { version = "1", optional = true }
-serde = { version = "1.0.119", optional = true, features = ["derive"] }
 codec = { default-features = false, features = ['derive'], package = 'parity-scale-codec', version = '2.0.0' }
 frame-system = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 frame-support = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 sp-runtime = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
 sp-std = {git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10', default-features = false }
-sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
-
-# local dependencies
+log = { version = "0.4.17" }
 primitives = { package = "automata-primitives", path = "../../primitives", default-features = false }
 automata-traits = { package = "automata-traits", path = "../../traits", default-features = false }
-log = { version = "0.4.17" }
+sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sha2 = { version = "0.9.5", default-features = false }
 
 [dev-dependencies]
 sp-core = { default-features = false, git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
@@ -34,16 +31,8 @@ pallet-balances = { git = 'https://github.com/automata-network/substrate.git', b
 [features]
 default = ['std']
 std = [
-	'codec/std',
 	'frame-support/std',
 	'frame-system/std',
 	'sp-std/std',
 	'sp-runtime/std',
-	'serde',
-	'serde_json',
-	'sp-core/full_crypto',
 ]
-# runtime-benchmarks = ['frame-benchmarking']
-# Note: frame-support `try-runtime` feature is released after v3.
-#   Uncomment the following line when `frame-support` version > `3.0.0`.
-# try-runtime = ['frame-support/try-runtime']

@@ -1,0 +1,28 @@
+[package]
+authors = ["Automata Team"]
+description = 'FRAME pallet for defining geode related logic.'
+edition = '2018'
+homepage = 'https://www.ata.network/'
+license = 'Apache-2.0'
+name = 'pallet-attestor-rpc'
+repository = "https://github.com/automata-network/automata"
+version = '0.1.0'
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0" }
+jsonrpc-core = "15.1.0"
+jsonrpc-core-client = "15.1.0"
+jsonrpc-derive = "15.1.0"
+
+sp-api = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sp-blockchain = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sp-core = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sp-runtime = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+sp-std = { git = 'https://github.com/automata-network/substrate.git', branch = 'polkadot-v0.9.10' }
+pallet-attestor-rpc-runtime-api = { path = './runtime-api' }
+
+# local dependencies
+log = { version = "0.4.17" }

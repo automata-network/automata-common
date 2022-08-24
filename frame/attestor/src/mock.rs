@@ -7,10 +7,10 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
+use frame_support::dispatch::DispatchResult;
 use frame_support::dispatch::DispatchResultWithPostInfo;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-use automata_traits::AttestorAccounting;
 
 pub const INIT_BALANCE: u64 = 100_100_100;
 
@@ -77,16 +77,6 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
-impl AttestorAccounting for Test {
-    type AccountId = u64;
-    fn attestor_staking(who: Self::AccountId) -> DispatchResultWithPostInfo {
-        Ok(().into())
-    }
-    fn attestor_unreserve(who: Self::AccountId) -> DispatchResultWithPostInfo {
-        Ok(().into())
-    }
-}
-
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Test
 where
     Call: From<C>,
@@ -95,11 +85,30 @@ where
     type OverarchingCall = Call;
 }
 
+parameter_types! {
+    pub const MinimumAttestorNum: u16 = 1;
+    pub const ExpectedAttestorNum: u16 = 3;
+    pub const HeartbeatTimeoutBlockNumber: u32 = 10;
+}
+
 impl attestor::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type Call = Call;
-    type AttestorAccounting = Test;
+    type HeartbeatTimeoutBlockNumber = HeartbeatTimeoutBlockNumber;
+    type ApplicationHandler = Test;
+}
+
+impl automata_traits::attestor::ApplicationTrait for Test {
+    type AccountId = u64;
+
+    fn application_unhealthy(who: Self::AccountId, is_attestor_down: bool) -> DispatchResult {
+        Ok(().into())
+    }
+
+    fn application_healthy(who: Self::AccountId) -> DispatchResult {
+        Ok(().into())
+    }
 }
 
 // Build genesis storage according to the mock runtime.
